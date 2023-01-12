@@ -76,17 +76,16 @@ module mem_addr_gen(
     input wire [1439:0] bricks,
     input ball_x,
     input ball_y,
-    input en,
-    input dir,
-    input hmir,
-    input vmir,
+    input board_x,
+    input board_y,
     input [9:0] h_cnt,
     input [9:0] v_cnt,
     output [16:0] pixel_addr
   );
     
     reg [16:0] addr;
-    reg hint,block,bx,by;
+    reg hint,hint2;
+    reg [2:0] block;
 
     // 3*20*24 = 1440
     //9*2的array, 存7bits.[0]指X軸(水平方向)左上角為原點
@@ -99,16 +98,21 @@ module mem_addr_gen(
 
     always @(*) begin
         hint = (h_cnt < ball_x + 16 + 1) && (h_cnt >= ball_x) && (v_cnt < ball_y + 10 + 1) && (v_cnt >= ball_y);
-        block = bricks[(3*(h_cnt/32) + 60*(v_cnt/20))+:3];
-        bx = h_cnt%32;
-        by = v_cnt%20;
+        //hint2 = (h_cnt < board_x + 96 + 1) && (h_cnt >= board_x) && (v_cnt < board_y + 10 + 1) && (v_cnt >= board_y);
+        block = bricks[(3*((h_cnt/32) + 20*(v_cnt/20)))+:3];
     end
 
     always@(*)begin
         if(hint) begin
-            addr = (((2%3)*32 + bx) + 96 * ( (2/3) * 20+(by-1)))% 5760;
-        end else begin
-            addr = (((block%3)*32 + bx) + 96 * ( (block/3) * 20+(by-1)))% 5760;
+            addr = ((h_cnt%32)+32*2)+(v_cnt%20)*96;
+        end
+        /*
+        else if(hint2) begin
+            addr = ((h_cnt%32)+32*3)+(v_cnt%20)*96;
+        end 
+        */
+        else begin
+            addr = ((h_cnt%32)+32*block)+(v_cnt%20)*96;
         end
     end
       
