@@ -29,7 +29,7 @@ module main(
     reg [9:0] board_x, board_y, board_vx, board_vy;
     reg [9:0] next_board_x, next_board_y, next_board_vx, next_board_vy;
 
-    reg [9:0] ball_x, ball_y, ball_vx, ball_vy;
+    reg [9:0] ball_x, ball_y, ball_vx, ball_vy; // speed can't exceed 8
     reg [9:0] next_ball_x, next_ball_y, next_ball_vx, next_ball_vy;
 
     reg[1:0] ball_dir, next_ball_dir;
@@ -63,9 +63,6 @@ module main(
         bricks[(3*19 + 60*0)+:3] = 3'd1; // (19,0)
 
         bricks[(3*0 + 60*1)+:3] = 3'd1; // (0,1)
-         bricks[(3*0 + 60*2)+:3] = 3'd1; // (0,2)
+        bricks[(3*0 + 60*2)+:3] = 3'd1; // (0,2)
     end
-
-
-
 endmodule
