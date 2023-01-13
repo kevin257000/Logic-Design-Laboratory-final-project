@@ -48,7 +48,9 @@ module main(
     reg[1:0] ball_dir;
     wire [1:0] next_ball_dir;
 
-    //clock_divider #(.n(22)) clock_divider_22(.clk(clk), .rst(rst_pb), .clk_div(clk_22));
+    wire collision_trig;
+
+    //clock_divider #(.n(22)) clock_divider_22(.clk(clk), .rst(rst), .clk_div(clk_22));
 
     always @(posedge clk_22, posedge rst) begin
         if(rst) begin
@@ -58,6 +60,7 @@ module main(
             ball_vx <= 10'd8;
             ball_vy <= 10'd6;
             ball_dir <= 2'b10; // right/up
+            board_x <= 10'd200;
         end
         else begin
             ball_x <= next_ball_x;
@@ -66,6 +69,7 @@ module main(
             ball_vy <= next_ball_vy;
             bricks <= next_bricks;
             ball_dir <=  next_ball_dir;
+            board_x <= next_board_x;
         end
     end
 
@@ -76,27 +80,19 @@ module main(
         .ball_vx(ball_vx),
         .ball_vy(ball_vy),
         .ball_dir(ball_dir),
+        .board_x(board_x),
+
         .next_bricks(next_bricks),
         .next_ball_x(next_ball_x),
         .next_ball_y(next_ball_y),
         .next_ball_vx(next_ball_vx),
         .next_ball_vy(next_ball_vy),
-        .next_ball_dir(next_ball_dir)
+        .next_ball_dir(next_ball_dir),
+        .collision_trig(collision_trig)
     );
 
     // 0 空 1 磚
     // for testing
-<<<<<<< HEAD
-    // always @(*) begin
-    //     bricks[(3*0 + 60*0)+:3] = 3'd1; // (0,0)
-    //     bricks[(3*1 + 60*0)+:3] = 3'd1; // (1,0)
-    //     bricks[(3*3 + 60*0)+:3] = 3'd1; // (3,0)
-    //     bricks[(3*19 + 60*0)+:3] = 3'd1; // (19,0)
-
-    //     bricks[(3*0 + 60*1)+:3] = 3'd1; // (0,1)
-    //     bricks[(3*0 + 60*2)+:3] = 3'd1; // (0,2)
-    // end
-=======
     always @(*) begin
         Game = 1440'd0;
         Game[(3*0 + 60*0)+:3] = 3'd1; // (0,0)
@@ -106,7 +102,6 @@ module main(
         Game[(3*0 + 60*1)+:3] = 3'd1; // (0,1)
         Game[(3*0 + 60*2)+:3] = 3'd1; // (0,2)
     end
->>>>>>> 8c49d1517e14cd5891196a54fea31659dd296e28
 
     wire [11:0] data;
     wire clk_25MHz;
@@ -169,15 +164,15 @@ module main(
         .key_valid(been_ready),
         .PS2_DATA(PS2_DATA),
         .PS2_CLK(PS2_CLK),
-        .rst(rst_pb),
+        .rst(rst),
         .clk(clk)
     );
 
     always @(*) begin
         next_board_x = board_x;
-        if(been_ready && key_down[last_change] == 1'b1) begin
-            if(key_down[keyA]) next_board_x = (board_x < 370) ? board_x + 5 : board_x; // A
-            else if(key_down[keyD]) next_board_x = (board_x > 100) ? board_x - 5 : board_x; // D
+        if(key_down[last_change] == 1'b1) begin
+            if(last_change == keyA) next_board_x = (board_x < 540) ? board_x + 5 : board_x; // A
+            else if(last_change == keyD) next_board_x = (board_x > 5) ? board_x - 5 : board_x; // D
         end
     end
     
