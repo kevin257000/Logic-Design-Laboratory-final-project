@@ -42,7 +42,11 @@ module ball_control(
 
         if(ball_dir[0] == 1) next_ball_y = ball_y + ball_vy;
         else next_ball_y = ball_y - ball_vy;
+<<<<<<< HEAD
 
+=======
+        /*
+>>>>>>> 8c49d1517e14cd5891196a54fea31659dd296e28
         // x
         if(ball_dir[1] == 1) begin // 向右
             if(ball_vx + ball_xr > H) begin // 撞右牆
@@ -196,7 +200,11 @@ module ball_control(
                 next_ball_y = 467 - ( (ball_y + ball_vy) - 467 );
             end
         end
+<<<<<<< HEAD
 
+=======
+        */
+>>>>>>> 8c49d1517e14cd5891196a54fea31659dd296e28
         // end collision
         next_ball_xl = next_ball_x;
         next_ball_xr = next_ball_x + BALL_W;
