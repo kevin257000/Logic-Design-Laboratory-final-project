@@ -68,7 +68,7 @@ module main(
             ball_vx <= next_ball_vx;
             ball_vy <= next_ball_vy;
             bricks <= next_bricks;
-            ball_dir <=  next_ball_dir;
+            ball_dir <= next_ball_dir;
             board_x <= next_board_x;
         end
     end
@@ -95,12 +95,29 @@ module main(
     // for testing
     always @(*) begin
         Game = 1440'd0;
-        Game[(3*0 + 60*0)+:3] = 3'd1; // (0,0)
-        Game[(3*1 + 60*0)+:3] = 3'd1; // (1,0)
-        Game[(3*3 + 60*0)+:3] = 3'd1; // (3,0)
-        Game[(3*19 + 60*0)+:3] = 3'd1; // (19,0)
-        Game[(3*0 + 60*1)+:3] = 3'd1; // (0,1)
-        Game[(3*0 + 60*2)+:3] = 3'd1; // (0,2)
+        Game[(3*1 + 60*1)+:3] = 3'd1; // (1,1)
+        Game[(3*2 + 60*1)+:3] = 3'd1; // (2,1)
+        Game[(3*3 + 60*1)+:3] = 3'd1; // (3,1)
+        Game[(3*1 + 60*2)+:3] = 3'd1; // (1,2)
+        Game[(3*2 + 60*2)+:3] = 3'd1; // (2,2)
+        Game[(3*3 + 60*2)+:3] = 3'd1; // (3,2)
+        Game[(3*1 + 60*3)+:3] = 3'd1; // (1,3)
+        Game[(3*2 + 60*3)+:3] = 3'd1; // (2,3)
+        Game[(3*3 + 60*3)+:3] = 3'd1; // (3,3)
+
+        Game[(3*13 + 60*1)+:3] = 3'd1; // (13,1)
+        Game[(3*14 + 60*1)+:3] = 3'd1; // (14,1)
+        Game[(3*15 + 60*1)+:3] = 3'd1; // (15,1)
+        Game[(3*13 + 60*2)+:3] = 3'd1; // (13,2)
+        Game[(3*14 + 60*2)+:3] = 3'd1; // (14,2)
+        Game[(3*15 + 60*2)+:3] = 3'd1; // (15,2)
+
+        Game[(3*7 + 60*4)+:3] = 3'd1; // (0,1)
+        Game[(3*8 + 60*4)+:3] = 3'd1; // (1,1)
+        Game[(3*9 + 60*4)+:3] = 3'd1; // (3,1)
+        Game[(3*7 + 60*5)+:3] = 3'd1; // (0,2)
+        Game[(3*8 + 60*5)+:3] = 3'd1; // (1,2)
+        Game[(3*9 + 60*5)+:3] = 3'd1; // (3,2)
     end
 
     wire [11:0] data;
@@ -171,8 +188,8 @@ module main(
     always @(*) begin
         next_board_x = board_x;
         if(key_down[last_change] == 1'b1) begin
-            if(last_change == keyA) next_board_x = (board_x < 540) ? board_x + 10 : board_x; // A
-            else if(last_change == keyD) next_board_x = (board_x > 5) ? board_x - 10 : board_x; // D
+            if(last_change == keyD) next_board_x = (board_x < 540) ? board_x + 10 : board_x; // A
+            else if(last_change == keyA) next_board_x = (board_x > 5) ? board_x - 10 : board_x; // D
         end
     end
     
@@ -187,7 +204,7 @@ module clock_divider2(clk1, clk, clk22);
     wire [21:0] next_num;
 
     always @(posedge clk) begin
-    num <= next_num;
+        num <= next_num;
     end
 
     assign next_num = num + 1'b1;
