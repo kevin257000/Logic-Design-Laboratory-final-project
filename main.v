@@ -1,13 +1,14 @@
 module main(
     clk,
     rst,
+    start,
     PS2_DATA,   // Keyboard I/O
     PS2_CLK,    // Keyboard I/O
     //led,       // LED: [15:13] octave & [4:0] volume
-    //audio_mclk, // master clock
-    //audio_lrck, // left-right clock
-    //audio_sck,  // serial clock
-    //audio_sdin, // serial audio data input
+    audio_mclk, // master clock
+    audio_lrck, // left-right clock
+    audio_sck,  // serial clock
+    audio_sdin, // serial audio data input
     //DISPLAY,    // 7-seg
     //DIGIT       // 7-seg
     vgaRed,
@@ -18,13 +19,14 @@ module main(
 );
     input wire clk;
     input wire rst;
+    input wire start;
     inout PS2_DATA;
 	inout PS2_CLK;
     //output reg [15:0] led;
-    //output audio_mclk;
-    //output audio_lrck;
-    //output audio_sck;
-    //output audio_sdin;
+    output audio_mclk;
+    output audio_lrck;
+    output audio_sck;
+    output audio_sdin;
     //output [6:0] DISPLAY;
     //output [3:0] DIGIT;
 
@@ -33,6 +35,13 @@ module main(
     output [3:0] vgaBlue;
     output hsync;
     output vsync;
+
+    // state
+    parameter MENU = 3'd0;
+    parameter WIN = 3'd1;
+    parameter LOSE = 3'd2;
+    parameter STAGE1 = 3'd3;
+    reg [2:0] state, next_state;
 
     reg [1439:0] bricks;
     wire [1439:0] next_bricks; // 3*20*24 = 1440
@@ -51,14 +60,51 @@ module main(
     wire collision_trig;
 
     //clock_divider #(.n(22)) clock_divider_22(.clk(clk), .rst(rst), .clk_div(clk_22));
+    debounce start_debounce(.clk(clk_22), .pb(start), .pb_debounced(start_debounced));
+    one_pulse start_one_pulse(.clk(clk_22), .pb_in(start_debounced), .pb_out(start_press));
+
+    always @(posedge clk_22, posedge rst) begin
+        if (rst) begin
+            state <= MENU;
+        end
+        else begin
+            state <= next_state;
+        end
+    end
+
+    always @(*) begin
+        case(state)
+            MENU : begin
+                if(start_press) begin
+                    next_state = STAGE1;
+                end
+                else begin
+                    next_state = state;
+                end
+            end
+            WIN : begin
+                next_state = state;
+            end
+            LOSE : begin
+                next_state = state;
+            end
+            STAGE1 : begin
+                if(bricks == 1440'd0) next_state = WIN;
+                else next_state = state;
+            end
+            default : begin
+                next_state = state;
+            end
+        endcase
+    end
 
     always @(posedge clk_22, posedge rst) begin
         if(rst) begin
             bricks <= Game;
             ball_x <= 10'd320;
             ball_y <= 10'd240;
-            ball_vx <= 10'd8;
-            ball_vy <= 10'd6;
+            ball_vx <= 10'd12;
+            ball_vy <= 10'd9;
             ball_dir <= 2'b10; // right/up
             board_x <= 10'd200;
         end
@@ -81,6 +127,7 @@ module main(
         .ball_vy(ball_vy),
         .ball_dir(ball_dir),
         .board_x(board_x),
+        .state(state),
 
         .next_bricks(next_bricks),
         .next_ball_x(next_ball_x),
@@ -112,12 +159,26 @@ module main(
         Game[(3*14 + 60*2)+:3] = 3'd1; // (14,2)
         Game[(3*15 + 60*2)+:3] = 3'd1; // (15,2)
 
+        Game[(3*13 + 60*5)+:3] = 3'd1; // (13,1)
+        Game[(3*14 + 60*5)+:3] = 3'd1; // (14,1)
+        Game[(3*15 + 60*5)+:3] = 3'd1; // (15,1)
+        Game[(3*13 + 60*6)+:3] = 3'd1; // (13,2)
+        Game[(3*14 + 60*6)+:3] = 3'd1; // (14,2)
+        Game[(3*15 + 60*6)+:3] = 3'd1; // (15,2)
+
         Game[(3*7 + 60*4)+:3] = 3'd1; // (0,1)
         Game[(3*8 + 60*4)+:3] = 3'd1; // (1,1)
         Game[(3*9 + 60*4)+:3] = 3'd1; // (3,1)
         Game[(3*7 + 60*5)+:3] = 3'd1; // (0,2)
         Game[(3*8 + 60*5)+:3] = 3'd1; // (1,2)
         Game[(3*9 + 60*5)+:3] = 3'd1; // (3,2)
+
+        Game[(3*7 + 60*8)+:3] = 3'd1; // (0,1)
+        Game[(3*8 + 60*8)+:3] = 3'd1; // (1,1)
+        Game[(3*9 + 60*8)+:3] = 3'd1; // (3,1)
+        Game[(3*7 + 60*9)+:3] = 3'd1; // (0,2)
+        Game[(3*8 + 60*9)+:3] = 3'd1; // (1,2)
+        Game[(3*9 + 60*9)+:3] = 3'd1; // (3,2)
     end
 
     wire [11:0] data;
@@ -129,6 +190,19 @@ module main(
     wire [9:0] v_cnt;  //480
 
     assign {vgaRed, vgaGreen, vgaBlue} = (valid==1'b1) ? pixel:12'h0;
+
+    music_control music_ctrl(
+        .clk(clk),
+        .clk_22(clk_22), // clk/0.05sec
+        .rst(rst),
+        .collision_trig(collision_trig),
+        .state(state),
+
+        .audio_mclk(audio_mclk), // master clock
+        .audio_lrck(audio_lrck), // left-right clock
+        .audio_sck(audio_sck),  // serial clock
+        .audio_sdin(audio_sdin) // serial audio data input
+    );
 
     clock_divider2 clk_wiz_0_inst(
       .clk(clk),
@@ -187,9 +261,11 @@ module main(
 
     always @(*) begin
         next_board_x = board_x;
-        if(key_down[last_change] == 1'b1) begin
-            if(last_change == keyD) next_board_x = (board_x < 540) ? board_x + 10 : board_x; // A
-            else if(last_change == keyA) next_board_x = (board_x > 5) ? board_x - 10 : board_x; // D
+        if(state != MENU) begin
+            if(key_down[last_change] == 1'b1) begin
+                if(last_change == keyD) next_board_x = (board_x < 540) ? board_x + 10 : board_x; // A
+                else if(last_change == keyA) next_board_x = (board_x > 5) ? board_x - 10 : board_x; // D
+            end
         end
     end
     

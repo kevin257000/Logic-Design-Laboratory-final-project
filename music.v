@@ -16,9 +16,9 @@
 `define sil   32'd50000000 // slience
 
 module music_control (
-	input clk, // clk/0.05sec
+	input clk, 
+    input clk_22, // clk/0.05sec
     input rst,
-	input reset,
     input collision_trig,
     input [2:0] state,
 
@@ -28,37 +28,74 @@ module music_control (
     output audio_sdin // serial audio data input
 );
 
+    // state
+    parameter MENU = 3'd0;
+    parameter WIN = 3'd1;
+    parameter LOSE = 3'd2;
+    parameter STAGE1 = 3'd3;
+
     // Internal Signal
     wire [15:0] audio_in_left, audio_in_right;
 
-    wire [11:0] ibeatNum;               // Beat counter
+    wire [11:0] ibeatSE, ibeatMENU;               // Beat counter
+    wire [31:0] freqL_SE, freqR_SE, freqL_MENU, freqR_MENU;    
     wire [31:0] freqL, freqR;           // Raw frequency, produced by music module
     reg [21:0] freq_outL, freq_outR;    // Processed frequency, adapted to the clock rate of Basys3
 
-    always @(*) begin
-        if(state == 0) begin
-            freq_outL = 50000000 / freqL;
-            freq_outR = 50000000 / freqR;
+    reg [9:0] SE_counter, next_SE_counter; // sound effect counter
+
+    assign freqL = (state == MENU) ? freqL_MENU : freqL_SE;
+    assign freqR = (state == MENU) ? freqR_MENU : freqR_SE;
+
+    always @(posedge clk_22, posedge rst) begin
+        if(rst) begin
+            SE_counter <= 0;
         end
         else begin
-            freq_outL = 50000000 / `sil;
-            freq_outR = 50000000 / `sil;
+            SE_counter <= next_SE_counter;
         end
-
+    end
+    always @(*) begin
+        if(collision_trig == 1) begin
+            // next_SE_counter = 16;
+            if(SE_counter < 8*6) next_SE_counter = SE_counter+8;
+            else next_SE_counter = 8;
+        end 
+        else next_SE_counter = SE_counter;
     end
 
-    player_control #(.LEN(256)) playerCtrl_00 ( 
-        .clk(clk),
-        .reset(rst),
+    always @(*) begin
+        freq_outL = 50000000 / freqL;
+        freq_outR = 50000000 / freqR;
+    end
+
+    player_control_SE #(.LEN(48)) playerCtrl_01 ( 
+        .clk(clk_22),
+        .rst(rst),
         .state(state),
-        .ibeat(ibeatNum)
+        .SE_counter(SE_counter),
+        .ibeat(ibeatSE)
+    );
+
+    player_control #(.LEN(256)) playerCtrl_00 ( 
+        .clk(clk_22),
+        .rst(rst),
+        .state(state),
+        .ibeat(ibeatMENU)
+    );
+
+    sound_effect music_SE (
+        .ibeatNum(ibeatSE),
+        .state(state),
+        .toneL(freqL_SE),
+        .toneR(freqR_SE)
     );
 
     music_MENU music_00 (
-        .ibeatNum(ibeatNum),
+        .ibeatNum(ibeatMENU),
         .state(state),
-        .toneL(freqL),
-        .toneR(freqR)
+        .toneL(freqL_MENU),
+        .toneR(freqR_MENU)
     );
 
     // Note generation
@@ -67,7 +104,7 @@ module music_control (
     note_gen noteGen_00(
         .clk(clk), 
         .rst(rst), 
-        .volume(3),
+        .volume(3'd4),
         .note_div_left(freq_outL), 
         .note_div_right(freq_outR), 
         .audio_left(audio_in_left),     // left sound audio
@@ -88,19 +125,19 @@ module music_control (
     
 endmodule
 
-
-module player_control #(parameter LEN=256)  (
+module player_control_SE #(parameter LEN=256)  (
 	input clk, 
-	input reset,
+	input rst,
 	input [2:0] state,
+    input [9:0] SE_counter,
 	output reg [11:0] ibeat
 );
 	// parameter LEN = 256;
     reg [11:0] next_ibeat;
 
 
-	always @(posedge clk, posedge reset) begin
-		if (reset) begin
+	always @(posedge clk, posedge rst) begin
+		if (rst) begin
 			ibeat <= 0;
 		end else begin
 			ibeat <= next_ibeat;
@@ -108,13 +145,90 @@ module player_control #(parameter LEN=256)  (
 	end
 
     always @* begin
-    	if(reset) begin
+    	if(rst || ibeat > SE_counter+8) begin
+    		next_ibeat = 0;
+        end else if(state != 0 && ibeat + 1 < SE_counter)begin // MEMU state
+    		next_ibeat = (ibeat + 1 < LEN) ? (ibeat + 1) : 0; //LEN-1;
+        end else begin
+            next_ibeat = ibeat;
+        end
+    end
+
+endmodule
+
+module player_control #(parameter LEN=256)  (
+	input clk, 
+	input rst,
+	input [2:0] state,
+	output reg [11:0] ibeat
+);
+	// parameter LEN = 256;
+    reg [11:0] next_ibeat;
+
+
+	always @(posedge clk, posedge rst) begin
+		if (rst) begin
+			ibeat <= 0;
+		end else begin
+			ibeat <= next_ibeat;
+		end
+	end
+
+    always @* begin
+    	if(rst) begin
     		next_ibeat = 0;
     	end else if(state == 0)begin // MEMU state
     		next_ibeat = (ibeat + 1 < LEN) ? (ibeat + 1) : 0; //LEN-1;
         end else begin
             next_ibeat = 0;
         end
+    end
+
+endmodule
+
+module sound_effect (
+	input [11:0] ibeatNum,
+    input [2:0] state,
+	output reg [31:0] toneL,
+    output reg [31:0] toneR
+);
+    // test
+    always @* begin
+        if(state != 0) begin
+            case(ibeatNum)
+                // --- Measure 1 ---
+                12'd0: toneR = `sil;	12'd1: toneR = `he;
+                12'd2: toneR = `he;	    12'd3: toneR = `he;
+                12'd4: toneR = `he;	    12'd5: toneR = `he;
+                12'd6: toneR = `he;	    12'd7: toneR = `sil;
+                12'd8: toneR = `he;	    12'd9: toneR = `he;
+                12'd10: toneR = `he;	12'd11: toneR = `he;
+                12'd12: toneR = `he;	12'd13: toneR = `he;
+                12'd14: toneR = `he;	12'd15: toneR = `sil;
+
+                12'd16: toneR = `hc;	    12'd17: toneR = `hc;
+                12'd18: toneR = `hc;	    12'd19: toneR = `hc;
+                12'd20: toneR = `hc;	    12'd21: toneR = `hc;
+                12'd22: toneR = `hc;	    12'd23: toneR = `sil;
+                12'd24: toneR = `hc;	    12'd25: toneR = `hc;
+                12'd26: toneR = `hc;	    12'd27: toneR = `hc;
+                12'd28: toneR = `hc;	    12'd29: toneR = `hc;
+                12'd30: toneR = `hc;	    12'd31: toneR = `sil;
+
+                12'd32: toneR = `hg;	    12'd33: toneR = `hg;
+                12'd34: toneR = `hg;	    12'd35: toneR = `hg;
+                12'd36: toneR = `hg;	    12'd37: toneR = `hg;
+                12'd38: toneR = `hg;	    12'd39: toneR = `sil;
+                12'd40: toneR = `hg;	    12'd41: toneR = `hg;
+                12'd42: toneR = `hg;	    12'd43: toneR = `hg;
+                12'd44: toneR = `hg;	    12'd45: toneR = `hg;
+                12'd46: toneR = `hg;	    12'd47: toneR = `sil;
+
+                default: toneR = `sil;
+            endcase
+        end else toneR = `sil;
+
+        toneL = toneR;
     end
 
 endmodule
@@ -245,7 +359,7 @@ module music_MENU (
                 12'd200: toneR = `d;	    12'd201: toneR = `d;
                 12'd202: toneR = `d;	    12'd203: toneR = `d;
                 12'd204: toneR = `d;	    12'd205: toneR = `d;
-                12'd206: toneR = `d;	    12'd207: toneR = `sil;
+                12'd206: toneR = `d;	    12'd207: toneR = `d;
 
                 12'd208: toneR = `d;	    12'd209: toneR = `d;
                 12'd210: toneR = `d;	    12'd211: toneR = `d;
@@ -254,7 +368,7 @@ module music_MENU (
                 12'd216: toneR = `d;	    12'd217: toneR = `d;
                 12'd218: toneR = `d;	    12'd219: toneR = `d;
                 12'd220: toneR = `d;	    12'd221: toneR = `d;
-                12'd222: toneR = `d;	    12'd223: toneR = `sil;
+                12'd222: toneR = `d;	    12'd223: toneR = `d;
 
                 12'd224: toneR = `d;	    12'd225: toneR = `d;
                 12'd226: toneR = `d;	    12'd227: toneR = `d;
@@ -263,7 +377,7 @@ module music_MENU (
                 12'd232: toneR = `d;	    12'd233: toneR = `d;
                 12'd234: toneR = `d;	    12'd235: toneR = `d;
                 12'd236: toneR = `d;	    12'd237: toneR = `d;
-                12'd238: toneR = `d;	    12'd239: toneR = `sil;
+                12'd238: toneR = `d;	    12'd239: toneR = `d;
 
                 12'd240: toneR = `d;	    12'd241: toneR = `d;
                 12'd242: toneR = `d;	    12'd243: toneR = `d;
@@ -285,7 +399,7 @@ endmodule
 
 module note_gen(
     clk, // clock from crystal
-    rst, // active high reset
+    rst, // active high rst
     volume, 
     note_div_left, // div for note generation
     note_div_right,
@@ -295,7 +409,7 @@ module note_gen(
 
     // I/O declaration
     input clk; // clock from crystal
-    input rst; // active low reset
+    input rst; // active low rst
     input [2:0] volume;
     input [21:0] note_div_left, note_div_right; // div for note generation
     output reg [15:0] audio_left, audio_right;
@@ -381,4 +495,97 @@ module note_gen(
     //                             (b_clk == 1'b0) ? 16'hE000 : 16'h2000;
     // assign audio_right = (note_div_right == 22'd1) ? 16'h0000 : 
     //                             (c_clk == 1'b0) ? 16'hE000 : 16'h2000;
+endmodule
+
+module speaker_control(
+    clk,  // clock from the crystal
+    rst,  // active high reset
+    audio_in_left, // left channel audio data input
+    audio_in_right, // right channel audio data input
+    audio_mclk, // master clock
+    audio_lrck, // left-right clock, Word Select clock, or sample rate clock
+    audio_sck, // serial clock
+    audio_sdin // serial audio data input
+);
+
+    // I/O declaration
+    input clk;  // clock from the crystal
+    input rst;  // active high reset
+    input [15:0] audio_in_left; // left channel audio data input
+    input [15:0] audio_in_right; // right channel audio data input
+    output audio_mclk; // master clock
+    output audio_lrck; // left-right clock
+    output audio_sck; // serial clock
+    output audio_sdin; // serial audio data input
+    reg audio_sdin;
+
+    // Declare internal signal nodes 
+    wire [8:0] clk_cnt_next;
+    reg [8:0] clk_cnt;
+    reg [15:0] audio_left, audio_right;
+
+    // Counter for the clock divider
+    assign clk_cnt_next = clk_cnt + 1'b1;
+
+    always @(posedge clk or posedge rst)
+        if (rst == 1'b1)
+            clk_cnt <= 9'd0;
+        else
+            clk_cnt <= clk_cnt_next;
+
+    // Assign divided clock output
+    assign audio_mclk = clk_cnt[1];
+    assign audio_lrck = clk_cnt[8];
+    assign audio_sck = 1'b1; // use internal serial clock mode
+
+    // audio input data buffer
+    always @(posedge clk_cnt[8] or posedge rst)
+        if (rst == 1'b1)
+            begin
+                audio_left <= 16'd0;
+                audio_right <= 16'd0;
+            end
+        else
+            begin
+                audio_left <= audio_in_left;
+                audio_right <= audio_in_right;
+            end
+
+    always @*
+        case (clk_cnt[8:4])
+            5'b00000: audio_sdin = audio_right[0];
+            5'b00001: audio_sdin = audio_left[15];
+            5'b00010: audio_sdin = audio_left[14];
+            5'b00011: audio_sdin = audio_left[13];
+            5'b00100: audio_sdin = audio_left[12];
+            5'b00101: audio_sdin = audio_left[11];
+            5'b00110: audio_sdin = audio_left[10];
+            5'b00111: audio_sdin = audio_left[9];
+            5'b01000: audio_sdin = audio_left[8];
+            5'b01001: audio_sdin = audio_left[7];
+            5'b01010: audio_sdin = audio_left[6];
+            5'b01011: audio_sdin = audio_left[5];
+            5'b01100: audio_sdin = audio_left[4];
+            5'b01101: audio_sdin = audio_left[3];
+            5'b01110: audio_sdin = audio_left[2];
+            5'b01111: audio_sdin = audio_left[1];
+            5'b10000: audio_sdin = audio_left[0];
+            5'b10001: audio_sdin = audio_right[15];
+            5'b10010: audio_sdin = audio_right[14];
+            5'b10011: audio_sdin = audio_right[13];
+            5'b10100: audio_sdin = audio_right[12];
+            5'b10101: audio_sdin = audio_right[11];
+            5'b10110: audio_sdin = audio_right[10];
+            5'b10111: audio_sdin = audio_right[9];
+            5'b11000: audio_sdin = audio_right[8];
+            5'b11001: audio_sdin = audio_right[7];
+            5'b11010: audio_sdin = audio_right[6];
+            5'b11011: audio_sdin = audio_right[5];
+            5'b11100: audio_sdin = audio_right[4];
+            5'b11101: audio_sdin = audio_right[3];
+            5'b11110: audio_sdin = audio_right[2];
+            5'b11111: audio_sdin = audio_right[1];
+            default: audio_sdin = 1'b0;
+        endcase
+
 endmodule

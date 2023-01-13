@@ -6,6 +6,7 @@ module ball_control(
     input wire [9:0] ball_vy,
     input wire [1:0] ball_dir,
     input wire [9:0] board_x,
+    input wire [2:0] state,
 
     output reg [1439:0] next_bricks,
     output reg [9:0] next_ball_x,
@@ -38,7 +39,6 @@ module ball_control(
         next_ball_vx = ball_vx;
         next_ball_vy = ball_vy;
 
-        collision_trig = 0;
         // wall collision
         wall_collision = 2'b00; // x/y
 
@@ -100,8 +100,6 @@ module ball_control(
             // else next_ball_y = ball_y - ball_vy;
         end
 
-        if(wall_collision != 0)  collision_trig = 1;
-
         // brick collision
 
         next_ball_xl = next_ball_x;
@@ -119,26 +117,22 @@ module ball_control(
                     // 右側碰撞
                     next_ball_dir[1] = 0;
                     // next_ball_x = ((next_ball_xl/32)) - ( (ball_x + ball_vx) - ((next_ball_xl/32)) );
-                    collision_trig = 1;
                     
                 end else if(bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] != 0) begin // 左下角碰撞
                     // 下側碰撞
                     next_ball_dir[0] = 0;
                     // next_ball_y = (20*(next_ball_yu/20)) - ( (ball_y + ball_vy) - (20*(next_ball_yu/20)) );
-                    collision_trig = 1;
 
                 end else if(bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3] != 0) begin // 右下角碰撞
                     if((((next_ball_xl/32) - ball_xl))*ball_vy > (ball_yu - (20*(next_ball_yu/20)))*ball_vx ) begin
                         // 右側碰撞
                         next_ball_dir[1] = 0;
                         // next_ball_x = (32*(next_ball_xl/32)) - ( (ball_x + ball_vx) - (32*(next_ball_xl/32)) );
-                        collision_trig = 1;
 
                     end else begin
                         // 下側碰撞
                         next_ball_dir[0] = 0;
                         // next_ball_y = (20*(next_ball_yu/20)) - ( (ball_y + ball_vy) - (20*(next_ball_yu/20)) );
-                        collision_trig = 1;
 
                     end
                 end 
@@ -147,26 +141,22 @@ module ball_control(
                     // 上側碰撞
                     next_ball_dir[0] = 1;
                     // next_ball_y = ((next_ball_yu/20)) - ( (ball_y + ball_vy) - ((next_ball_yu/20)) );
-                    collision_trig = 1;
 
                 end else if(bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] != 0) begin // 右下角碰撞
                     // 右側碰撞
                     next_ball_dir[1] = 0;
                     // next_ball_x = ((next_ball_xl/32)) - ( (ball_x + ball_vx) - ((next_ball_xl/32)) );
-                    collision_trig = 1;
 
                 end else if(bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3] != 0) begin // 右上角碰撞
                     if((((next_ball_xl/32) - ball_xl))*ball_vy > (ball_yu - ((next_ball_yu/20) + 20))*ball_vx ) begin
                         // 右側碰撞
                         next_ball_dir[1] = 0;
                         // next_ball_x = ((next_ball_xl/32)) - ( (ball_x + ball_vx) - ((next_ball_xl/32)) );
-                        collision_trig = 1;
 
                     end else begin
                         // 上側碰撞
                         next_ball_dir[0] = 1;
                         // next_ball_y = ((next_ball_yu/20)) - ( (ball_y + ball_vy) - ((next_ball_yu/20)) );
-                        collision_trig = 1;
 
                     end
                 end 
@@ -175,26 +165,22 @@ module ball_control(
                     // 左側碰撞
                     next_ball_dir[1] = 1;
                     // next_ball_x = ((next_ball_xl/32) + 32) + ( ((next_ball_xl/32) + 32) - (ball_x - ball_vx) );
-                    collision_trig = 1;
 
                 end else if(bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] != 0) begin // 右下角碰撞
                     // 下側碰撞
                     next_ball_dir[0] = 0;
                     // next_ball_y = ((next_ball_yu/20)) - ( (ball_y + ball_vy) - ((next_ball_yu/20)) );
-                    collision_trig = 1;
 
                 end else if(bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3] != 0) begin // 左下角碰撞
                     if((ball_xl - ((next_ball_xl/32) + 32))*ball_vy > (((next_ball_yu/20)) - ball_yu)*ball_vx ) begin
                         // 左側碰撞
                         next_ball_dir[1] = 1;
                         // next_ball_x = ((next_ball_xl/32) + 32) + ( ((next_ball_xl/32) + 32) - (ball_x - ball_vx) );
-                        collision_trig = 1;
 
                     end else begin
                         // 下側碰撞
                         next_ball_dir[0] = 0;
                         // next_ball_y = ((next_ball_yu/20)) - ( (ball_y + ball_vy) - ((next_ball_yu/20)) );
-                        collision_trig = 1;
 
                     end
                 end 
@@ -203,26 +189,22 @@ module ball_control(
                     // 左側碰撞
                     next_ball_dir[1] = 1;
                     // next_ball_x = ((next_ball_xl/32) + 32) + ( ((next_ball_xl/32) + 32) - (ball_x - ball_vx) );
-                    collision_trig = 1;
 
                 end else if(bricks[(3*(next_ball_xr/32) + 60*(next_ball_yu/20))+:3] != 0) begin // 右上角碰撞
                     // 上側碰撞
                     next_ball_dir[0] = 1;
                     // next_ball_y = ((next_ball_yu/20) + 20) + ( ((next_ball_yu/20) + 20) - (ball_y - ball_vy) );
-                    collision_trig = 1;
 
                 end else if(bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] != 0) begin // 左上角碰撞
                     if((ball_xl - ((next_ball_xl/32) + 32))*ball_vy > (ball_yu - ((next_ball_yu/20) + 20))*ball_vx ) begin
                         // 左側碰撞
                         next_ball_dir[1] = 1;
                         // next_ball_x = ((next_ball_xl/32) + 32) + ( ((next_ball_xl/32) + 32) - (ball_x - ball_vx) );
-                        collision_trig = 1;
 
                     end else begin
                         // 上側碰撞
                         next_ball_dir[0] = 1;
                         // next_ball_y = ((next_ball_yu/20) + 20) + ( ((next_ball_yu/20) + 20) - (ball_y - ball_vy) );
-                        collision_trig = 1;
 
                     end
                 end
@@ -240,18 +222,44 @@ module ball_control(
                 end else if(next_ball_xl >= board_x+68)begin
                     next_ball_dir[1] = 1;
                 end
-                collision_trig = 1;
             end
         end
+
+        // MENU state
+        // test
+        if(state == 0) begin
+            next_ball_x = ball_x;
+            next_ball_y = ball_y;
+            next_ball_vx = ball_vx;
+            next_ball_vy = ball_vy;
+            next_ball_dir = ball_dir;
+        end
+
     end
 
     always @(*) begin
         // 將球下個時間點的四個位置會碰到的磚塊破壞
+
+        if(
+            bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] ||
+            bricks[(3*(next_ball_xr/32) + 60*(next_ball_yu/20))+:3] ||
+            bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] ||
+            bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3]
+        ) begin
+            collision_trig = 1;
+        end else collision_trig = 0;
+
         next_bricks = bricks;
         next_bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] = 3'd0;
         next_bricks[(3*(next_ball_xr/32) + 60*(next_ball_yu/20))+:3] = 3'd0;
         next_bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] = 3'd0;
         next_bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3] = 3'd0;
+
+
+        // MENU state
+        if(state == 0) begin
+            next_bricks = bricks;
+        end
     end
 
 endmodule
