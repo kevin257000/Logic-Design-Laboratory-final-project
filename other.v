@@ -1,4 +1,4 @@
-module clock_divider #(parameter n=22) (
+module clock_divider#(parameter n=22) (
     input clk,
     input rst,
     output clk_div  
