@@ -52,11 +52,11 @@ module ball_control(
         else next_ball_y = ball_y - ball_vy;
         // x
         if(ball_dir[1] == 1) begin // 向右
-            if(ball_vx + ball_xr > H) begin // 撞右牆
+            if(ball_vx + ball_xr >= H) begin // 撞右牆
                 wall_collision[1] = 1;
                 next_ball_dir[1] = 0;
                 // next_ball_x = H - BALL_W;
-                next_ball_x = H - ( ball_vx + ball_xr - H ); // 右側-彈回量
+                next_ball_x = H - ( ball_vx + ball_xr - H ) - BALL_W; // 右側-彈回量
             end
             else begin
                 next_ball_x = ball_x + ball_vx;
@@ -74,13 +74,15 @@ module ball_control(
 
         // y
         if(ball_dir[0] == 1) begin // 向下
-            if(ball_vy + ball_yd > V) begin // 撞下牆
-                wall_collision[0] = 1;
-                next_ball_dir[0] = 0;
-                // next_ball_y = V - BALL_H;
-                next_ball_y = V - ( ball_vy + ball_yd - V ); // 下側-彈回量
-            end
-            else next_ball_y = ball_y + ball_vy;
+            // 不彈回
+            // if(ball_vy + ball_yd > V) begin // 撞下牆
+            //     wall_collision[0] = 1;
+            //     next_ball_dir[0] = 0;
+            //     // next_ball_y = V - BALL_H;
+            //     next_ball_y = V - ( ball_vy + ball_yd - V ); // 下側-彈回量
+            // end
+            // else 
+            next_ball_y = ball_y + ball_vy;
         end
         else begin // 向上
             if(ball_vy > ball_yu) begin // 撞上牆

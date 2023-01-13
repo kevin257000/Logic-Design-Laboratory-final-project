@@ -171,8 +171,8 @@ module main(
     always @(*) begin
         next_board_x = board_x;
         if(key_down[last_change] == 1'b1) begin
-            if(last_change == keyA) next_board_x = (board_x < 540) ? board_x + 5 : board_x; // A
-            else if(last_change == keyD) next_board_x = (board_x > 5) ? board_x - 5 : board_x; // D
+            if(last_change == keyA) next_board_x = (board_x < 540) ? board_x + 10 : board_x; // A
+            else if(last_change == keyD) next_board_x = (board_x > 5) ? board_x - 10 : board_x; // D
         end
     end
     
