@@ -108,7 +108,7 @@ module mem_addr_gen(
         end
         
         else if(hint2) begin
-            addr = ((h_cnt%32)+32*3)+(v_cnt%20)*96;
+            addr = ((h_cnt%32)+32*4)+(v_cnt%20+20)*96;
         end 
         
         else begin

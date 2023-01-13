@@ -50,7 +50,7 @@ module main(
 
     //clock_divider #(.n(22)) clock_divider_22(.clk(clk), .rst(rst_pb), .clk_div(clk_22));
 
-    always @(posedge clk_22, posedge rst) begin
+    always @(posedge clk, posedge rst) begin
         if(rst) begin
             bricks <= Game;
             ball_x <= 10'd320;
@@ -58,6 +58,7 @@ module main(
             ball_vx <= 10'd8;
             ball_vy <= 10'd6;
             ball_dir <= 2'b10; // right/up
+            board_x <= 10'd200;
         end
         else begin
             ball_x <= next_ball_x;
@@ -65,7 +66,8 @@ module main(
             ball_vx <= next_ball_vx;
             ball_vy <= next_ball_vy;
             bricks <= next_bricks;
-            ball_dir <=  next_ball_dir;
+            ball_dir <= next_ball_dir;
+            board_x <= next_board_x;
         end
     end
 
@@ -76,6 +78,8 @@ module main(
         .ball_vx(ball_vx),
         .ball_vy(ball_vy),
         .ball_dir(ball_dir),
+        .board_x(board_x),
+
         .next_bricks(next_bricks),
         .next_ball_x(next_ball_x),
         .next_ball_y(next_ball_y),
@@ -157,15 +161,15 @@ module main(
         .key_valid(been_ready),
         .PS2_DATA(PS2_DATA),
         .PS2_CLK(PS2_CLK),
-        .rst(rst_pb),
+        .rst(rst),
         .clk(clk)
     );
 
     always @(*) begin
         next_board_x = board_x;
         if(been_ready && key_down[last_change] == 1'b1) begin
-            if(key_down[keyA]) next_board_x = (board_x < 370) ? board_x + 5 : board_x; // A
-            else if(key_down[keyD]) next_board_x = (board_x > 100) ? board_x - 5 : board_x; // D
+            if(key_down[keyA]) next_board_x = (board_x < 540) ? board_x + 5 : board_x; // A
+            else if(key_down[keyD]) next_board_x = (board_x > 5) ? board_x - 5 : board_x; // D
         end
     end
     
@@ -180,7 +184,7 @@ module clock_divider2(clk1, clk, clk22);
     wire [21:0] next_num;
 
     always @(posedge clk) begin
-    num <= next_num;
+        num <= next_num;
     end
 
     assign next_num = num + 1'b1;
