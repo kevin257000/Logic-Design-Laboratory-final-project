@@ -145,7 +145,7 @@ module ball_control(
             end else if(ball_dir == 2'b10) begin // 往右上
                 if(bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] != 0) begin // 左上角碰撞
                     // 上側碰撞
-                    next_ball_dir[0] = 0;
+                    next_ball_dir[0] = 1;
                     // next_ball_y = ((next_ball_yu/20)) - ( (ball_y + ball_vy) - ((next_ball_yu/20)) );
                     collision_trig = 1;
 
@@ -164,7 +164,7 @@ module ball_control(
 
                     end else begin
                         // 上側碰撞
-                        next_ball_dir[0] = 0;
+                        next_ball_dir[0] = 1;
                         // next_ball_y = ((next_ball_yu/20)) - ( (ball_y + ball_vy) - ((next_ball_yu/20)) );
                         collision_trig = 1;
 
