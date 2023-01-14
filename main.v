@@ -98,6 +98,7 @@ module main(
         endcase
     end
 
+
     always @(posedge clk_22, posedge rst) begin
         if(rst) begin
             bricks <= Game;
@@ -138,10 +139,15 @@ module main(
         .collision_trig(collision_trig)
     );
 
+
+
     // 0 空 1 磚
     // for testing
     always @(*) begin
         Game = 1440'd0;
+        
+        //Game[(3*x + 60*y)+:3] = 3'd1; // (x,y)
+
         Game[(3*1 + 60*1)+:3] = 3'd1; // (1,1)
         Game[(3*2 + 60*1)+:3] = 3'd1; // (2,1)
         Game[(3*3 + 60*1)+:3] = 3'd1; // (3,1)
@@ -182,12 +188,47 @@ module main(
     end
 
     wire [11:0] data;
+    wire [11:0] data_menu;
+    wire [11:0] data_win;
+    wire [11:0] data_lose;
     wire clk_25MHz;
     wire [16:0] pixel_addr;
-    wire [11:0] pixel;
+    reg [11:0] pixel;//,next_pixel;
+    wire [11:0] pixel_play;
+    wire [11:0] pixel_menu;
     wire valid;
     wire [9:0] h_cnt; //640
     wire [9:0] v_cnt;  //480
+
+    //always @(posedge clk) begin pixel <= next_pixel; end
+
+
+    always @(*) begin
+        case(state)
+            MENU : begin
+                if(start_press) begin
+                    pixel = pixel_play;
+                end
+                else begin
+                    pixel = pixel_menu;
+                end
+            end
+            WIN : begin
+                pixel = pixel_win;
+
+            end
+            LOSE : begin
+                pixel = pixel_lose;
+            end
+            STAGE1 : begin
+                if(bricks == 1440'd0) pixel = pixel_win;
+                else pixel = pixel_play;
+            end
+            default : begin
+                pixel = pixel_menu;
+            end
+        endcase
+    end
 
     assign {vgaRed, vgaGreen, vgaBlue} = (valid==1'b1) ? pixel:12'h0;
 
@@ -211,8 +252,7 @@ module main(
     );
 
     mem_addr_gen mem_addr_gen_inst(
-      .clk(clk_22),
-      .rst(rst),
+      .state(state),
       .bricks(bricks),
       .ball_x(ball_x),
       .ball_y(ball_y),
@@ -222,13 +262,41 @@ module main(
       .v_cnt(v_cnt),
       .pixel_addr(pixel_addr)
     );
- 
+    
+    //block memory for play
     blk_mem_gen_0 blk_mem_gen_0_inst(
       .clka(clk_25MHz),
       .wea(0),
       .addra(pixel_addr),
       .dina(data[11:0]),
-      .douta(pixel)
+      .douta(pixel_play)
+    ); 
+
+    //block memory for menu
+    blk_mem_gen_1 blk_mem_gen_1_inst(
+      .clka(clk_25MHz),
+      .wea(0),
+      .addra(pixel_addr),
+      .dina(data_menu[11:0]),
+      .douta(pixel_menu)
+    ); 
+
+    //block memory for win 
+    blk_mem_gen_2 blk_mem_gen_2_inst(
+      .clka(clk_25MHz),
+      .wea(0),
+      .addra(pixel_addr),
+      .dina(data_win[11:0]),
+      .douta(pixel_win)
+    ); 
+
+    //block memory for lose 
+    blk_mem_gen_3 blk_mem_gen_3_inst(
+      .clka(clk_25MHz),
+      .wea(0),
+      .addra(pixel_addr),
+      .dina(data_lose[11:0]),
+      .douta(pixel_lose)
     ); 
 
     vga_controller vga_inst(

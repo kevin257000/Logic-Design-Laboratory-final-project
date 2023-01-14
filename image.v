@@ -71,8 +71,7 @@ module vga_controller (
 endmodule
 
 module mem_addr_gen(
-    input clk,
-    input rst,
+    input [2:0] state,
     input wire [1439:0] bricks,
     input [9:0] ball_x,
     input [9:0] ball_y,
@@ -96,24 +95,64 @@ module mem_addr_gen(
 
     assign pixel_addr = addr;
 
+    integer _x,_y;
+
     always @(*) begin
-        hint = (h_cnt < ball_x + 16 + 1) && (h_cnt >= ball_x) && (v_cnt < ball_y + 10 + 1) && (v_cnt >= ball_y);
+        if(h_cnt < ball_x+8) _x = ball_x+8-h_cnt;
+        else _x = h_cnt - (ball_x+8);
+    end
+
+    always @(*) begin
+        if(v_cnt < ball_y+10) _y = ball_y+10-v_cnt;
+        else _y = v_cnt - (ball_y+10);
+    end
+
+    always @(*) begin
+        hint = ((_x*_x +_y*_y) < 100);
+        //hint = (h_cnt < ball_x + 16 + 1) && (h_cnt >= ball_x) && (v_cnt < ball_y + 10 + 1) && (v_cnt >= ball_y);
         hint2 = (h_cnt < board_x + 96 + 1) && (h_cnt >= board_x) && (v_cnt < board_y + 10 + 1) && (v_cnt >= board_y);
         block = bricks[(3*((h_cnt/32) + 20*(v_cnt/20)))+:3];
     end
 
-    always@(*)begin
-        if(hint) begin
-            addr = ((h_cnt%32)+32*2)+(v_cnt%20)*96;
-        end
-        
-        else if(hint2) begin
-            addr = ((h_cnt%32)+32*4)+(v_cnt%20+20)*96;
-        end 
-        
-        else begin
-            addr = ((h_cnt%32)+32*block)+(v_cnt%20)*96;
-        end
+    parameter MENU = 3'd0;
+    parameter WIN = 3'd1;
+    parameter LOSE = 3'd2;
+    parameter STAGE1 = 3'd3;
+
+    always @(*) begin
+        case(state)
+            MENU : begin
+                addr = ((h_cnt>>1)+320*(v_cnt>>1))% 76800; //640*480 --> 320*240
+                //addr = ((h_cnt%32)+32*block)+(v_cnt%20)*96;
+            end
+            WIN : begin
+                addr = ((h_cnt>>1)+320*(v_cnt>>1))% 76800; //640*480 --> 320*240
+            end
+            LOSE : begin
+                addr = ((h_cnt>>1)+320*(v_cnt>>1))% 76800; //640*480 --> 320*240
+            end
+            STAGE1 : begin
+                if(hint2) begin
+                    addr = ((h_cnt%32)+32*5)+(v_cnt%20+20)*96;
+                end 
+                else if(hint) begin
+                    addr = ((h_cnt%32)+32*2)+(v_cnt%20)*96;
+                end
+                else begin
+                    addr = ((h_cnt%32)+32*block)+(v_cnt%20)*96;
+                end
+            end
+            default : begin
+                if(hint2) begin
+                    addr = ((h_cnt%32)+32*5)+(v_cnt%20+20)*96;
+                end else if(hint) begin
+                    addr = ((h_cnt%32)+32*2)+(v_cnt%20)*96;
+                end
+                else begin
+                    addr = ((h_cnt%32)+32*block)+(v_cnt%20)*96;
+                end
+            end
+        endcase
     end
       
 endmodule
