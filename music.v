@@ -19,7 +19,7 @@ module music_control (
 	input clk, 
     input clk_22, // clk/0.05sec
     input rst,
-    input collision_trig,
+    input [3:0] collision_trig,
     input [2:0] state,
 
     output audio_mclk, // master clock
@@ -56,7 +56,7 @@ module music_control (
         end
     end
     always @(*) begin
-        if(collision_trig == 1) begin
+        if(collision_trig != 0) begin
             // next_SE_counter = 16;
             if(SE_counter < 8*6) next_SE_counter = SE_counter+8;
             else next_SE_counter = 8;

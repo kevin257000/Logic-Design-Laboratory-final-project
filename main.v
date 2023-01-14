@@ -4,7 +4,7 @@ module main(
     start,
     PS2_DATA,   // Keyboard I/O
     PS2_CLK,    // Keyboard I/O
-    led,       // LED: [15:13] octave & [4:0] volume
+    led,       // LED
     audio_mclk, // master clock
     audio_lrck, // left-right clock
     audio_sck,  // serial clock
@@ -22,7 +22,7 @@ module main(
     input wire start;
     inout PS2_DATA;
 	inout PS2_CLK;
-    output reg [7:0] led;
+    output reg [15:0] led;
     output audio_mclk;
     output audio_lrck;
     output audio_sck;
@@ -59,15 +59,18 @@ module main(
 
     wire [3:0] collision_trig;
 
+    reg [6:0] skill_point, next_skill_point;
+
+
     //clock_divider #(.n(22)) clock_divider_22(.clk(clk), .rst(rst), .clk_div(clk_22));
     debounce start_debounce(.clk(clk_22), .pb(start), .pb_debounced(start_debounced));
     one_pulse start_one_pulse(.clk(clk_22), .pb_in(start_debounced), .pb_out(start_press));
 
-    reg [7:0] nled;
+    reg [15:0] nled;
 
     always @(posedge clk_22) begin
         if(rst)begin
-            led <= 8'b0;
+            led <= 16'b0;
         end else begin
             led <= nled;
         end
@@ -76,14 +79,18 @@ module main(
     always @(*) begin
         case(state)
             MENU : begin
-                if(start_press) nled = 8'b0001_1111;
-                else nled = 8'b0;
+                if(start_press) nled = 16'b0000_0000_0001_1111;
+                else nled = 16'b0;
             end
-            WIN : nled = 8'b1000_0000;
-            LOSE : nled = 8'b0100_0000;
+            WIN : nled = 16'b0000_0000_1000_0000;
+            LOSE : nled = 16'b0000_0000_0100_0000;
             STAGE1 : begin
-                if( ( ball_vy + ball_y + 10 ) > ( 480 + 50 ) ) nled = led >> 1;
-                else nled = led;
+                nled = led;
+                if( ( ball_vy + ball_y + 10 ) > ( 480 + 50 ) ) nled[4:0] = led[4:0] >> 1;
+                if(skill_point == 0) nled[15:13] = 3'b000;
+                if(skill_point == 1) nled[15:13] = 3'b100;
+                if(skill_point == 2) nled[15:13] = 3'b110;
+                if(skill_point == 3) nled[15:13] = 3'b111;
             end
             default : nled = led;
         endcase
@@ -116,7 +123,7 @@ module main(
             end
             STAGE1 : begin
                 if(bricks == 1440'd0) next_state = WIN;
-                else if(led == 16'b0) next_state = LOSE;
+                else if(led[4:0] == 5'b0) next_state = LOSE;
                 else next_state = STAGE1;
             end
             default : begin
@@ -146,27 +153,6 @@ module main(
             board_x <= next_board_x;
         end
     end
-
-    ball_control BallController(
-        .bricks(bricks),
-        .ball_x(ball_x),
-        .ball_y(ball_y),
-        .ball_vx(ball_vx),
-        .ball_vy(ball_vy),
-        .ball_dir(ball_dir),
-        .board_x(board_x),
-        .state(state),
-
-        .next_bricks(next_bricks),
-        .next_ball_x(next_ball_x),
-        .next_ball_y(next_ball_y),
-        .next_ball_vx(next_ball_vx),
-        .next_ball_vy(next_ball_vy),
-        .next_ball_dir(next_ball_dir),
-        .collision_trig(collision_trig)
-    );
-
-
 
     // 0 空 1 磚
     // for testing
@@ -337,8 +323,11 @@ module main(
     wire [8:0] last_change;
     wire been_ready;
 
-    parameter keyA = 9'b0_0001_1100;
-    parameter keyD = 9'b0_0010_0011;
+    parameter keyA = 9'b0_0001_1100; // 1C
+    parameter keyD = 9'b0_0010_0011; // 23
+    parameter keyJ = 9'b0_0011_1011; // 3B
+    parameter keyK = 9'b0_0100_0010; // 42
+    parameter keyL = 9'b0_0100_1011; // 4B
 
     KeyboardDecoder key_de (
         .key_down(key_down),
@@ -350,15 +339,85 @@ module main(
         .clk(clk)
     );
 
+    // test
+
+    reg [2:0] skill_press; // 2:J, 1:K, 0:L
+    wire [2:0] skill, skill_remain; // if the skill is still remained
+
+    always @(*) begin
+        skill_press = 3'd0;
+        if(state == STAGE1) begin
+            if(key_down[last_change] == 1'b1) begin
+                if(key_down[keyJ]) skill_press[2] = 1;
+                if(key_down[keyK]) skill_press[1] = 1;
+                if(key_down[keyL]) skill_press[0] = 1;
+            end
+        end
+    end
+
+    // debounce J_debounce(.clk(clk_22), .pb(skill_press[2]), .pb_debounced(J_press_debounced));
+    // one_pulse J_one_pulse(.clk(clk_22), .pb_in(J_press_debounced), .pb_out(skillJ));
+
+    // debounce K_debounce(.clk(clk_22), .pb(skill_press[1]), .pb_debounced(K_press_debounced));
+    // one_pulse K_one_pulse(.clk(clk_22), .pb_in(K_press_debounced), .pb_out(skillK));
+
+    // debounce L_debounce(.clk(clk_22), .pb(skill_press[0]), .pb_debounced(L_press_debounced));
+    // one_pulse L_one_pulse(.clk(clk_22), .pb_in(L_press_debounced), .pb_out(skillL));
+
+    one_pulse J_one_pulse(.clk(clk_22), .pb_in(skill_press[2]), .pb_out(skill[0]));
+    one_pulse K_one_pulse(.clk(clk_22), .pb_in(skill_press[1]), .pb_out(skill[1]));
+    one_pulse L_one_pulse(.clk(clk_22), .pb_in(skill_press[0]), .pb_out(skill[2]));
+
+    always @(posedge clk_22, posedge rst) begin
+        if(rst) begin
+            skill_point <= 3;
+        end
+        else begin
+            skill_point <= next_skill_point;
+        end
+    end
+
+    always @(*) begin
+        next_skill_point = skill_point;
+        if(state == STAGE1) begin
+            if( (skill[2] & ~skill_remain[2]) == 1 || (skill[1] & ~skill_remain[1]) || (skill[0] & ~skill_remain[0])) begin
+                next_skill_point = (skill_point > 0) ? skill_point-1 : 0; // A
+            end
+        end
+    end
+
     always @(*) begin
         next_board_x = board_x;
-        if(state != MENU) begin
+        if(state == STAGE1) begin
             if(key_down[last_change] == 1'b1) begin
                 if(last_change == keyD) next_board_x = (board_x < 540) ? board_x + 10 : board_x; // A
                 else if(last_change == keyA) next_board_x = (board_x > 5) ? board_x - 10 : board_x; // D
             end
         end
     end
+
+    ball_control BallController(
+        .bricks(bricks),
+        .ball_x(ball_x),
+        .ball_y(ball_y),
+        .ball_vx(ball_vx),
+        .ball_vy(ball_vy),
+        .ball_dir(ball_dir),
+        .board_x(board_x),
+        .state(state),
+        .skill(skill),
+        .clk_22(clk_22),
+        .rst(rst),
+
+        .next_bricks(next_bricks),
+        .next_ball_x(next_ball_x),
+        .next_ball_y(next_ball_y),
+        .next_ball_vx(next_ball_vx),
+        .next_ball_vy(next_ball_vy),
+        .next_ball_dir(next_ball_dir),
+        .skill_remain(skill_remain),
+        .collision_trig(collision_trig)
+    );
     
 endmodule
 
