@@ -12,6 +12,7 @@ module ball_control(
     input wire [9:0] bulletA_y,
     input wire [9:0] bulletB_x,
     input wire [9:0] bulletB_y,
+    input wire [6:0] skill_point,
     input clk_22,
     input rst,
 
@@ -61,7 +62,8 @@ module ball_control(
         if(ball_dir[0] == 1 && ball_vy + ball_yd > V+50) begin // 向下
             next_skill_remain = 3'b0;
         end else begin
-            next_skill_remain = skill_remain | skill;
+            if(skill_point > 0) next_skill_remain = skill_remain | skill;
+            else next_skill_remain = skill_remain;
         end
     end
 
@@ -113,7 +115,8 @@ module ball_control(
             next_bulletA_x = board_x;
             next_bulletA_y = BY;
 
-            next_bulletB_x = board_x;
+            if(skill_remain[0] == 1) next_bulletB_x = board_x + 96*2 - 16;
+            else next_bulletB_x = board_x + 96 - 16;
             next_bulletB_y = BY;
         end
     end
@@ -350,10 +353,14 @@ module ball_control(
         next_bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] = 3'd0;
         next_bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3] = 3'd0;
 
-        next_bricks[(3*(next_bulletA_x/32) + 60*(next_bulletA_y/20))+:3] = 0;
-        next_bricks[(3*((next_bulletA_x+16)/32) + 60*(next_bulletA_y/20))+:3] = 0;
-        next_bricks[(3*(next_bulletB_x/32) + 60*(next_bulletB_y/20))+:3] = 0;
-        next_bricks[(3*((next_bulletB_x+16)/32) + 60*(next_bulletB_y/20))+:3] = 0;
+        if(next_bulletA_y == 700) begin
+            next_bricks[(3*(next_bulletA_x/32) + 60*((bulletA_y - bullet_v)/20))+:3] = 3'd0;
+            next_bricks[(3*((next_bulletA_x+16)/32) + 60*((bulletA_y - bullet_v)/20))+:3] = 3'd0; 
+        end
+        if(next_bulletB_y == 700) begin
+            next_bricks[(3*(next_bulletB_x/32) + 60*((bulletB_y - bullet_v)/20))+:3] = 3'd0;
+            next_bricks[(3*((next_bulletB_x+16)/32) + 60*((bulletB_y - bullet_v)/20))+:3] = 3'd0;
+        end
 
         // MENU state
         if(state != 3) begin

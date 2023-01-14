@@ -186,7 +186,7 @@ module main(
 
             bulletA_x <= next_bulletA_x;
             bulletA_y <= next_bulletA_y;
-            bulletB_y <= next_bulletB_x;
+            bulletB_x <= next_bulletB_x;
             bulletB_y <= next_bulletB_y;        
         end
     end
@@ -246,8 +246,8 @@ module main(
     reg [11:0] pixel;
     wire [11:0] pixel_play;
     wire [11:0] pixel_menu;
-    wire [11:0] pixel_win;
-    wire [11:0] pixel_lose;
+    // wire [11:0] pixel_win;
+    // wire [11:0] pixel_lose;
     wire valid;
     wire [9:0] h_cnt; //640
     wire [9:0] v_cnt;  //480
@@ -280,83 +280,11 @@ module main(
 
     assign {vgaRed, vgaGreen, vgaBlue} = (valid==1'b1) ? pixel:12'h0;
 
-    music_control music_ctrl(
-        .clk(clk),
-        .clk_22(clk_22), // clk/0.05sec
-        .rst(rst),
-        .collision_trig(collision_trig),
-        .state(state),
+    // test
 
-        .audio_mclk(audio_mclk), // master clock
-        .audio_lrck(audio_lrck), // left-right clock
-        .audio_sck(audio_sck),  // serial clock
-        .audio_sdin(audio_sdin) // serial audio data input
-    );
+    reg [2:0] skill_press; // 2:J, 1:K, 0:L
+    wire [2:0] skill, skill_remain; // if the skill is still remained
 
-    clock_divider2 clk_wiz_0_inst(
-      .clk(clk),
-      .clk1(clk_25MHz),
-      .clk22(clk_22)
-    );
-
-    mem_addr_gen mem_addr_gen_inst(
-      .state(state),
-      .bricks(bricks),
-      .ball_x(ball_x),
-      .ball_y(ball_y),
-      .board_x(board_x),
-      .board_y(10'd467),
-      .h_cnt(h_cnt),
-      .v_cnt(v_cnt),
-      .pixel_addr(pixel_addr)
-    );
-    
-    //block memory for play
-    blk_mem_gen_0 blk_mem_gen_0_inst(
-      .clka(clk_25MHz),
-      .wea(0),
-      .addra(pixel_addr),
-      .dina(data[11:0]),
-      .douta(pixel_play)
-    ); 
-
-    //block memory for menu
-    blk_mem_gen_1 blk_mem_gen_1_inst(
-      .clka(clk_25MHz),
-      .wea(0),
-      .addra(pixel_addr),
-      .dina(data_menu[11:0]),
-      .douta(pixel_menu)
-    ); 
-
-    //block memory for win 
-    blk_mem_gen_2 blk_mem_gen_2_inst(
-      .clka(clk_25MHz),
-      .wea(0),
-      .addra(pixel_addr),
-      .dina(data_win[11:0]),
-      .douta(pixel_win)
-    ); 
-
-    //block memory for lose 
-    blk_mem_gen_3 blk_mem_gen_3_inst(
-      .clka(clk_25MHz),
-      .wea(0),
-      .addra(pixel_addr),
-      .dina(data_lose[11:0]),
-      .douta(pixel_lose)
-    ); 
-
-    vga_controller vga_inst(
-      .pclk(clk_25MHz),
-      .reset(rst),
-      .hsync(hsync),
-      .vsync(vsync),
-      .valid(valid),
-      .h_cnt(h_cnt),
-      .v_cnt(v_cnt)
-    );
-    
     reg [3:0] key_num;
     wire [511:0] key_down;
     wire [8:0] last_change;
@@ -367,21 +295,6 @@ module main(
     parameter keyJ = 9'b0_0011_1011; // 3B
     parameter keyK = 9'b0_0100_0010; // 42
     parameter keyL = 9'b0_0100_1011; // 4B
-
-    KeyboardDecoder key_de (
-        .key_down(key_down),
-        .last_change(last_change),
-        .key_valid(been_ready),
-        .PS2_DATA(PS2_DATA),
-        .PS2_CLK(PS2_CLK),
-        .rst(rst),
-        .clk(clk)
-    );
-
-    // test
-
-    reg [2:0] skill_press; // 2:J, 1:K, 0:L
-    wire [2:0] skill, skill_remain; // if the skill is still remained
 
     always @(*) begin
         skill_press = 3'd0;
@@ -431,6 +344,98 @@ module main(
         end
     end
 
+    music_control music_ctrl(
+        .clk(clk),
+        .clk_22(clk_22), // clk/0.05sec
+        .rst(rst),
+        .collision_trig(collision_trig),
+        .state(state),
+
+        .audio_mclk(audio_mclk), // master clock
+        .audio_lrck(audio_lrck), // left-right clock
+        .audio_sck(audio_sck),  // serial clock
+        .audio_sdin(audio_sdin) // serial audio data input
+    );
+
+    clock_divider2 clk_wiz_0_inst(
+      .clk(clk),
+      .clk1(clk_25MHz),
+      .clk22(clk_22)
+    );
+
+    mem_addr_gen mem_addr_gen_inst(
+      .state(state),
+      .bricks(bricks),
+      .ball_x(ball_x),
+      .ball_y(ball_y),
+      .board_x(board_x),
+      .board_y(10'd467),
+      .h_cnt(h_cnt),
+      .v_cnt(v_cnt),
+      .skill_remain(skill_remain),
+      .bulletA_x(bulletA_x),
+      .bulletA_y(bulletA_y),
+      .bulletB_x(bulletB_x),
+      .bulletB_y(bulletB_y),
+      .pixel_addr(pixel_addr)
+    );
+    
+    //block memory for play
+    blk_mem_gen_0 blk_mem_gen_0_inst(
+      .clka(clk_25MHz),
+      .wea(0),
+      .addra(pixel_addr),
+      .dina(data[11:0]),
+      .douta(pixel_play)
+    ); 
+
+    //block memory for menu
+    blk_mem_gen_1 blk_mem_gen_1_inst(
+      .clka(clk_25MHz),
+      .wea(0),
+      .addra(pixel_addr),
+      .dina(data_menu[11:0]),
+      .douta(pixel_menu)
+    ); 
+
+    //block memory for win 
+    blk_mem_gen_2 blk_mem_gen_2_inst(
+      .clka(clk_25MHz),
+      .wea(0),
+      .addra(pixel_addr),
+      .dina(data_win[11:0]),
+      .douta(pixel_win)
+    ); 
+
+    //block memory for lose 
+    blk_mem_gen_3 blk_mem_gen_3_inst(
+      .clka(clk_25MHz),
+      .wea(0),
+      .addra(pixel_addr),
+      .dina(data_lose[11:0]),
+      .douta(pixel_lose)
+    ); 
+
+    vga_controller vga_inst(
+      .pclk(clk_25MHz),
+      .reset(rst),
+      .hsync(hsync),
+      .vsync(vsync),
+      .valid(valid),
+      .h_cnt(h_cnt),
+      .v_cnt(v_cnt)
+    );
+
+    KeyboardDecoder key_de (
+        .key_down(key_down),
+        .last_change(last_change),
+        .key_valid(been_ready),
+        .PS2_DATA(PS2_DATA),
+        .PS2_CLK(PS2_CLK),
+        .rst(rst),
+        .clk(clk)
+    );
+
     ball_control BallController(
         .bricks(bricks),
         .ball_x(ball_x),
@@ -445,6 +450,7 @@ module main(
         .bulletA_y(bulletA_y),
         .bulletB_x(bulletB_x),
         .bulletB_y(bulletB_y),
+        .skill_point(skill_point),
         .clk_22(clk_22),
         .rst(rst),
 

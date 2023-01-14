@@ -168,10 +168,10 @@ module mem_addr_gen(
                     addr = ((h_cnt%32)+32*2)+(v_cnt%20)*96;
                 end
                 else if(hint3) begin
-                    addr = ((h_cnt%32)+32*5)+(v_cnt%20)*96;
+                    addr = ((h_cnt%32)+32*5)+(v_cnt%20+20)*96;
                 end
                 else if(hint4) begin
-                    addr = ((h_cnt%32)+32*5)+(v_cnt%20)*96;
+                    addr = ((h_cnt%32)+32*5)+(v_cnt%20+20)*96;
                 end
                 else begin
                     addr = ((h_cnt%32)+32*block)+(v_cnt%20)*96;
