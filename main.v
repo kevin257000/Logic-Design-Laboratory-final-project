@@ -54,12 +54,21 @@ module main(
     reg [9:0] ball_x, ball_y, ball_vx, ball_vy;
     wire [9:0] next_ball_x, next_ball_y, next_ball_vx, next_ball_vy;
 
+    reg [9:0] bulletA_x, bulletA_y, bulletB_x, bulletB_y; // skill2
+    wire [9:0] next_bulletA_x, next_bulletA_y, next_bulletB_x, next_bulletB_y;
+
     reg[1:0] ball_dir;
     wire [1:0] next_ball_dir;
 
     wire [3:0] collision_trig;
 
     reg [6:0] skill_point, next_skill_point;
+
+    reg [7:0] life_point;
+
+    reg [15:0] nums;
+
+    SevenSegment SS_00(.display(DISPLAY), .digit(DIGIT), .nums(nums), .rst(rst), .clk(clk));
 
 
     //clock_divider #(.n(22)) clock_divider_22(.clk(clk), .rst(rst), .clk_div(clk_22));
@@ -355,15 +364,6 @@ module main(
         end
     end
 
-    // debounce J_debounce(.clk(clk_22), .pb(skill_press[2]), .pb_debounced(J_press_debounced));
-    // one_pulse J_one_pulse(.clk(clk_22), .pb_in(J_press_debounced), .pb_out(skillJ));
-
-    // debounce K_debounce(.clk(clk_22), .pb(skill_press[1]), .pb_debounced(K_press_debounced));
-    // one_pulse K_one_pulse(.clk(clk_22), .pb_in(K_press_debounced), .pb_out(skillK));
-
-    // debounce L_debounce(.clk(clk_22), .pb(skill_press[0]), .pb_debounced(L_press_debounced));
-    // one_pulse L_one_pulse(.clk(clk_22), .pb_in(L_press_debounced), .pb_out(skillL));
-
     one_pulse J_one_pulse(.clk(clk_22), .pb_in(skill_press[2]), .pb_out(skill[0]));
     one_pulse K_one_pulse(.clk(clk_22), .pb_in(skill_press[1]), .pb_out(skill[1]));
     one_pulse L_one_pulse(.clk(clk_22), .pb_in(skill_press[0]), .pb_out(skill[2]));
@@ -387,11 +387,16 @@ module main(
     end
 
     always @(*) begin
+        if(skill_remain[1] == 1) board_vx = 20;
+        else board_vx = 10;
+    end
+
+    always @(*) begin
         next_board_x = board_x;
         if(state == STAGE1) begin
             if(key_down[last_change] == 1'b1) begin
-                if(last_change == keyD) next_board_x = (board_x < 540) ? board_x + 10 : board_x; // A
-                else if(last_change == keyA) next_board_x = (board_x > 5) ? board_x - 10 : board_x; // D
+                if(last_change == keyD) next_board_x = (board_x < 540) ? board_x + board_vx : board_x; // A
+                else if(last_change == keyA) next_board_x = (board_x > 5) ? board_x - board_vx : board_x; // D
             end
         end
     end
