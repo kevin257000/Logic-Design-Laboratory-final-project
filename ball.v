@@ -7,6 +7,9 @@ module ball_control(
     input wire [1:0] ball_dir,
     input wire [9:0] board_x,
     input wire [2:0] state,
+    input wire [2:0] skill,
+    input clk_22,
+    input rst,
 
     output reg [1439:0] next_bricks,
     output reg [9:0] next_ball_x,
@@ -14,6 +17,8 @@ module ball_control(
     output reg [9:0] next_ball_vx,
     output reg [9:0] next_ball_vy,
     output reg [1:0] next_ball_dir,
+
+    output reg [2:0] skill_remain,
 
     //Modify
     output reg [3:0] collision_trig
@@ -32,6 +37,28 @@ module ball_control(
 
     reg [9:0] next_ball_xl, next_ball_xr, next_ball_yu, next_ball_yd; // 左右/上下
 
+    parameter BY = 450;
+
+    reg [2:0] next_skill_remain;
+
+    always @(posedge clk_22, posedge rst) begin
+        if(rst) begin
+            skill_remain <= 0;
+        end
+        else begin
+            skill_remain <= next_skill_remain;
+        end
+    end
+
+    always @(*) begin
+        if(ball_dir[0] == 1 && ball_vy + ball_yd > V+50) begin // 向下
+            next_skill_remain = 3'b0;
+        end else begin
+            next_skill_remain = skill_remain | skill;
+        end
+    end
+
+    LFSR #(.NUM_BITS(3)) random (.clk(clk_22), .rst(rst), .o_LFSR_Data(random_num));
 
     // 目前所有碰撞判定只有使用左上角做判定，左上碰到才算碰
     reg [1:0] wall_collision;
@@ -50,6 +77,7 @@ module ball_control(
 
         if(ball_dir[0] == 1) next_ball_y = ball_y + ball_vy;
         else next_ball_y = ball_y - ball_vy;
+
         
         // x
         if(ball_dir[1] == 1) begin // 向右
@@ -58,15 +86,6 @@ module ball_control(
                 next_ball_dir[1] = 0;
                 next_ball_x = H-BALL_W;
             end
-            // if(ball_vx + ball_xr >= H) begin // 撞右牆
-            //     wall_collision[1] = 1;
-            //     next_ball_dir[1] = 0;
-            //     // next_ball_x = 200; //test
-            //     // next_ball_x = H - BALL_W;
-            //     // next_ball_x = H - ( ball_vx + ball_xr - H ) - BALL_W; // 右側-彈回量
-            // end
-            // else next_ball_x = ball_x + ball_vx;
-            
         end
         else begin // 向左
             if(ball_vx > ball_xl) begin // 撞左牆
@@ -81,13 +100,16 @@ module ball_control(
         // y
         if(ball_dir[0] == 1) begin // 向下
             // 不彈回
-            if(ball_vy + ball_yd > V+50) begin // 撞下牆
+            if(ball_vy + ball_yd > V+50) begin // 掉落下界
                 // wall_collision[0] = 1;
                 // next_ball_dir[0] = 0;
                 // next_ball_y = V - BALL_H;
                 // next_ball_y = V - ( ball_vy + ball_yd - V ); // 下側-彈回量
-                next_ball_y = 467-12;
+                next_ball_dir[0] = 0;
+                next_ball_y = BY-40;
                 next_ball_x = board_x+40;
+                next_ball_vx = 12;
+                next_ball_vy = 9;
             end
             // else next_ball_y = ball_y + ball_vy;
         end
@@ -213,22 +235,33 @@ module ball_control(
         end
 
         // test
-        // board_y = 467
-        if(next_ball_yd >= 467 && next_ball_yd <= 467+10) begin 
+        // board_y = BY
+        
+        if(next_ball_yd >= BY && next_ball_yd <= BY+10) begin 
             if( (next_ball_xr >= board_x && next_ball_xr <= board_x+96) || (next_ball_xl >= board_x && next_ball_xl <= board_x+96) )  begin
                 next_ball_dir[0] = 0;
-                // next_ball_y = 467 - ( (next_ball_yd) - 467 );
+                // next_ball_y = BY - ( (next_ball_yd) - BY );
                 if(next_ball_xl <= board_x+20) begin // 撞到板子左側
                     next_ball_dir[1] = 0;
                 end else if(next_ball_xl >= board_x+68)begin
                     next_ball_dir[1] = 1;
+                end
+
+                if(random_num != 0) begin
+                    if(random_num <= 4) begin
+                        if(next_ball_vx + random_num <= 20) next_ball_vx = next_ball_vx + random_num;
+                        if(next_ball_vx + random_num <= 20) next_ball_vy = next_ball_vy + random_num;
+                    end else begin
+                        if(next_ball_vx > random_num-4) next_ball_vx = next_ball_vx - (random_num-4);
+                        if(next_ball_vx > random_num-4) next_ball_vy = next_ball_vy - (random_num-4);
+                    end
                 end
             end
         end
 
         // MENU state
         // test
-        if(state == 0) begin
+        if(state != 3) begin
             next_ball_x = ball_x;
             next_ball_y = ball_y;
             next_ball_vx = ball_vx;
@@ -240,17 +273,21 @@ module ball_control(
 
     always @(*) begin
         // 將球下個時間點的四個位置會碰到的磚塊破壞
+        collision_trig = 
+        bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] + 
+        bricks[(3*(next_ball_xr/32) + 60*(next_ball_yu/20))+:3] + 
+        bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] + 
+        bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3];
 
-        if(
-            bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] ||
-            bricks[(3*(next_ball_xr/32) + 60*(next_ball_yu/20))+:3] ||
-            bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] ||
-            bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3]
-        ) begin
-            //Modify
-            //collision_trig = 1;
-            collision_trig = bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] + bricks[(3*(next_ball_xr/32) + 60*(next_ball_yu/20))+:3] + bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] + bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3];
-        end else collision_trig = 0;
+        // if(
+        //     bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] ||
+        //     bricks[(3*(next_ball_xr/32) + 60*(next_ball_yu/20))+:3] ||
+        //     bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] ||
+        //     bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3]
+        // ) begin
+        //     //Modify
+        //     collision_trig = 1;
+        // end else collision_trig = 0;
 
         next_bricks = bricks;
         next_bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] = 3'd0;
@@ -260,9 +297,46 @@ module ball_control(
 
 
         // MENU state
-        if(state == 0) begin
+        if(state != 3) begin
             next_bricks = bricks;
         end
     end
 
 endmodule
+
+module LFSR #(parameter NUM_BITS = 3)
+(
+    input clk,
+    input rst,
+    output [NUM_BITS-1:0] o_LFSR_Data
+);
+
+    reg [NUM_BITS:1] r_LFSR = 0;
+    reg              r_XNOR;
+
+    always @(posedge clk) begin
+        if (rst) r_LFSR <= 6;
+        else r_LFSR <= {r_LFSR[NUM_BITS-1:1], r_XNOR};
+    end
+    
+    always @(*)
+        begin
+        case (NUM_BITS)
+            3: begin
+                r_XNOR = r_LFSR[3] ^~ r_LFSR[2];
+            end
+            5: begin
+                r_XNOR = r_LFSR[5] ^~ r_LFSR[3];
+            end
+            6: begin
+                r_XNOR = r_LFSR[6] ^~ r_LFSR[5];
+            end
+            7: begin
+                r_XNOR = r_LFSR[7] ^~ r_LFSR[6];
+            end
+        endcase // case (NUM_BITS)
+        end // always @ (*)
+
+    assign o_LFSR_Data = r_LFSR[NUM_BITS:1];
+
+endmodule // LFSR
