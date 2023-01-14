@@ -218,6 +218,8 @@ module main(
     reg [11:0] pixel;
     wire [11:0] pixel_play;
     wire [11:0] pixel_menu;
+    wire [11:0] pixel_win;
+    wire [11:0] pixel_lose;
     wire valid;
     wire [9:0] h_cnt; //640
     wire [9:0] v_cnt;  //480

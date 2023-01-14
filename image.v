@@ -79,11 +79,16 @@ module mem_addr_gen(
     input [9:0] board_y,
     input [9:0] h_cnt,
     input [9:0] v_cnt,
+    input [2:0] skill_remain,
+    input [9:0] bulletA_x,
+    input [9:0] bulletA_y,
+    input [9:0] bulletB_x,
+    input [9:0] bulletB_y,
     output [16:0] pixel_addr
   );
     
     reg [16:0] addr;
-    reg hint,hint2;
+    reg hint,hint2,hint3,hint4,hint5;
     reg [2:0] block;
 
     // 3*20*24 = 1440
@@ -95,7 +100,7 @@ module mem_addr_gen(
 
     assign pixel_addr = addr;
 
-    integer _x,_y;
+    integer _x,_y,_xA,_yA,_xB,_yB;
 
     always @(*) begin
         if(h_cnt < ball_x+8) _x = ball_x+8-h_cnt;
@@ -108,9 +113,33 @@ module mem_addr_gen(
     end
 
     always @(*) begin
-        hint = ((_x*_x +_y*_y) < 100);
-        //hint = (h_cnt < ball_x + 16 + 1) && (h_cnt >= ball_x) && (v_cnt < ball_y + 10 + 1) && (v_cnt >= ball_y);
-        hint2 = (h_cnt < board_x + 96 + 1) && (h_cnt >= board_x) && (v_cnt < board_y + 10 + 1) && (v_cnt >= board_y);
+        if(h_cnt < bulletA_x+8) _xA = bulletA_x+8-h_cnt;
+        else _xA = h_cnt - (bulletA_x+8);
+    end
+
+    always @(*) begin
+        if(v_cnt < bulletA_y+10) _yA = bulletA_y+10-v_cnt;
+        else _yA = v_cnt - (bulletA_y+10);
+    end
+
+    always @(*) begin
+        if(h_cnt < bulletB_x+8) _xB = bulletB_x+8-h_cnt;
+        else _xB = h_cnt - (bulletB_x+8);
+    end
+
+    always @(*) begin
+        if(v_cnt < bulletB_y+10) _yB = bulletB_y+10-v_cnt;
+        else _yB = v_cnt - (bulletB_y+10);
+    end
+
+    always @(*) begin
+        
+        //hint = (h_cnt < ball_x + 16 + 1) && (h_cnt >= ball_x) && (v_cnt < ball_y + 10 + 1) && (v_cnt >= ball_y) ;
+        hint = (h_cnt < board_x + 96*(1+skill_remain[0]) + 1) && (h_cnt >= board_x) && (v_cnt < board_y + 10 + 1) && (v_cnt >= board_y);
+        hint2 = ((_x*_x +_y*_y) < 100);
+        hint3 = ((_xA*_xA +_yA*_yA) < 100)&&(bulletA_y!=700);
+        hint4 = ((_xB*_xB +_yB*_yB) < 100)&&(bulletB_y!=700);
+
         block = bricks[(3*((h_cnt/32) + 20*(v_cnt/20)))+:3];
     end
 
@@ -132,21 +161,34 @@ module mem_addr_gen(
                 addr = ((h_cnt>>1)+320*(v_cnt>>1))% 76800; //640*480 --> 320*240
             end
             STAGE1 : begin
-                if(hint2) begin
-                    addr = ((h_cnt%32)+32*5)+(v_cnt%20+20)*96;
-                end 
-                else if(hint) begin
+                if(hint) begin
+                    addr = ((h_cnt%32)+32*3)+(v_cnt%20+20)*96;
+                end
+                else if(hint2) begin
                     addr = ((h_cnt%32)+32*2)+(v_cnt%20)*96;
+                end
+                else if(hint3) begin
+                    addr = ((h_cnt%32)+32*5)+(v_cnt%20)*96;
+                end
+                else if(hint4) begin
+                    addr = ((h_cnt%32)+32*5)+(v_cnt%20)*96;
                 end
                 else begin
                     addr = ((h_cnt%32)+32*block)+(v_cnt%20)*96;
                 end
             end
             default : begin
-                if(hint2) begin
-                    addr = ((h_cnt%32)+32*5)+(v_cnt%20+20)*96;
-                end else if(hint) begin
+                if(hint) begin
+                    addr = ((h_cnt%32)+32*3)+(v_cnt%20+20)*96;
+                end
+                else if(hint2) begin
                     addr = ((h_cnt%32)+32*2)+(v_cnt%20)*96;
+                end
+                else if(hint3) begin
+                    addr = ((h_cnt%32)+32*5)+(v_cnt%20)*96;
+                end
+                else if(hint4) begin
+                    addr = ((h_cnt%32)+32*5)+(v_cnt%20)*96;
                 end
                 else begin
                     addr = ((h_cnt%32)+32*block)+(v_cnt%20)*96;
