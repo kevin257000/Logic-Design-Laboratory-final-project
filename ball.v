@@ -15,7 +15,8 @@ module ball_control(
     output reg [9:0] next_ball_vy,
     output reg [1:0] next_ball_dir,
 
-    output reg collision_trig
+    //Modify
+    output reg [3:0] collision_trig
 );
 
     parameter H = 640;
@@ -246,7 +247,9 @@ module ball_control(
             bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] ||
             bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3]
         ) begin
-            collision_trig = 1;
+            //Modify
+            //collision_trig = 1;
+            collision_trig = bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] + bricks[(3*(next_ball_xr/32) + 60*(next_ball_yu/20))+:3] + bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] + bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3];
         end else collision_trig = 0;
 
         next_bricks = bricks;

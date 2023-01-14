@@ -4,13 +4,13 @@ module main(
     start,
     PS2_DATA,   // Keyboard I/O
     PS2_CLK,    // Keyboard I/O
-    //led,       // LED: [15:13] octave & [4:0] volume
+    led,       // LED: [15:13] octave & [4:0] volume
     audio_mclk, // master clock
     audio_lrck, // left-right clock
     audio_sck,  // serial clock
     audio_sdin, // serial audio data input
-    //DISPLAY,    // 7-seg
-    //DIGIT       // 7-seg
+    DISPLAY,    // 7-seg
+    DIGIT,       // 7-seg
     vgaRed,
     vgaGreen,
     vgaBlue,
@@ -22,13 +22,13 @@ module main(
     input wire start;
     inout PS2_DATA;
 	inout PS2_CLK;
-    //output reg [15:0] led;
+    output reg [7:0] led;
     output audio_mclk;
     output audio_lrck;
     output audio_sck;
     output audio_sdin;
-    //output [6:0] DISPLAY;
-    //output [3:0] DIGIT;
+    output [6:0] DISPLAY;
+    output [3:0] DIGIT;
 
     output [3:0] vgaRed;
     output [3:0] vgaGreen;
@@ -57,11 +57,37 @@ module main(
     reg[1:0] ball_dir;
     wire [1:0] next_ball_dir;
 
-    wire collision_trig;
+    wire [3:0] collision_trig;
 
     //clock_divider #(.n(22)) clock_divider_22(.clk(clk), .rst(rst), .clk_div(clk_22));
     debounce start_debounce(.clk(clk_22), .pb(start), .pb_debounced(start_debounced));
     one_pulse start_one_pulse(.clk(clk_22), .pb_in(start_debounced), .pb_out(start_press));
+
+    reg [7:0] nled;
+
+    always @(posedge clk_22) begin
+        if(rst)begin
+            led <= 8'b0;
+        end else begin
+            led <= nled;
+        end
+    end
+
+    always @(*) begin
+        case(state)
+            MENU : begin
+                if(start_press) nled = 8'b0001_1111;
+                else nled = 8'b0;
+            end
+            WIN : nled = 8'b1000_0000;
+            LOSE : nled = 8'b0100_0000;
+            STAGE1 : begin
+                if( ( ball_vy + ball_y + 10 ) > ( 480 + 50 ) ) nled = led >> 1;
+                else nled = led;
+            end
+            default : nled = led;
+        endcase
+    end
 
     always @(posedge clk_22, posedge rst) begin
         if (rst) begin
@@ -90,7 +116,8 @@ module main(
             end
             STAGE1 : begin
                 if(bricks == 1440'd0) next_state = WIN;
-                else next_state = state;
+                else if(led == 16'b0) next_state = LOSE;
+                else next_state = STAGE1;
             end
             default : begin
                 next_state = state;
@@ -193,15 +220,12 @@ module main(
     wire [11:0] data_lose;
     wire clk_25MHz;
     wire [16:0] pixel_addr;
-    reg [11:0] pixel;//,next_pixel;
+    reg [11:0] pixel;
     wire [11:0] pixel_play;
     wire [11:0] pixel_menu;
     wire valid;
     wire [9:0] h_cnt; //640
     wire [9:0] v_cnt;  //480
-
-    //always @(posedge clk) begin pixel <= next_pixel; end
-
 
     always @(*) begin
         case(state)
@@ -215,7 +239,6 @@ module main(
             end
             WIN : begin
                 pixel = pixel_win;
-
             end
             LOSE : begin
                 pixel = pixel_lose;
