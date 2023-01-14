@@ -64,20 +64,38 @@ module main(
 
     reg [6:0] skill_point, next_skill_point;
 
-    reg [7:0] life_point;
+    reg [7:0] life_point, next_life_point;
 
     reg [15:0] nums;
 
+    always @(posedge clk_22, posedge rst) begin
+        if(rst)begin
+            life_point <= 8'b0000_0101;
+        end else begin
+            life_point <= next_life_point;
+        end
+    end
+
+    always @(*) begin
+        next_life_point = life_point;
+        if( ( ball_vy + ball_y + 10 ) > ( 480 + 50 ) )begin
+            next_life_point = (life_point > 0) ? life_point-1 : 0;
+        end
+    end
+
+    always @(*) begin
+        nums = 16'd0;
+        nums[7:0] = life_point;
+    end
+
     SevenSegment SS_00(.display(DISPLAY), .digit(DIGIT), .nums(nums), .rst(rst), .clk(clk));
 
-
-    //clock_divider #(.n(22)) clock_divider_22(.clk(clk), .rst(rst), .clk_div(clk_22));
     debounce start_debounce(.clk(clk_22), .pb(start), .pb_debounced(start_debounced));
     one_pulse start_one_pulse(.clk(clk_22), .pb_in(start_debounced), .pb_out(start_press));
 
     reg [15:0] nled;
 
-    always @(posedge clk_22) begin
+    always @(posedge clk_22, posedge rst) begin
         if(rst)begin
             led <= 16'b0;
         end else begin
@@ -151,6 +169,11 @@ module main(
             ball_vy <= 10'd9;
             ball_dir <= 2'b10; // right/up
             board_x <= 10'd200;
+
+            bulletA_x <= 10'd250;
+            bulletA_y <= 10'd700;
+            bulletB_x <= 10'd100;
+            bulletB_y <= 10'd700;
         end
         else begin
             ball_x <= next_ball_x;
@@ -160,6 +183,11 @@ module main(
             bricks <= next_bricks;
             ball_dir <= next_ball_dir;
             board_x <= next_board_x;
+
+            bulletA_x <= next_bulletA_x;
+            bulletA_y <= next_bulletA_y;
+            bulletB_y <= next_bulletB_x;
+            bulletB_y <= next_bulletB_y;        
         end
     end
 
@@ -411,6 +439,10 @@ module main(
         .board_x(board_x),
         .state(state),
         .skill(skill),
+        .bulletA_x(bulletA_x),
+        .bulletA_y(bulletA_y),
+        .bulletB_x(bulletB_x),
+        .bulletB_y(bulletB_y),
         .clk_22(clk_22),
         .rst(rst),
 
@@ -421,24 +453,12 @@ module main(
         .next_ball_vy(next_ball_vy),
         .next_ball_dir(next_ball_dir),
         .skill_remain(skill_remain),
+        .next_bulletA_x(next_bulletA_x),
+        .next_bulletA_y(next_bulletA_y),
+        .next_bulletB_x(next_bulletB_x),
+        .next_bulletB_y(next_bulletB_y),
+
         .collision_trig(collision_trig)
     );
     
-endmodule
-
-module clock_divider2(clk1, clk, clk22);
-    parameter n = 26; 
-    input clk;
-    output clk1;
-    output clk22;
-    reg [21:0] num;
-    wire [21:0] next_num;
-
-    always @(posedge clk) begin
-        num <= next_num;
-    end
-
-    assign next_num = num + 1'b1;
-    assign clk1 = num[1];
-    assign clk22 = num[21];
 endmodule
