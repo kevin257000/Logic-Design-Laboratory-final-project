@@ -58,7 +58,7 @@ module main(
     reg[1:0] ball_dir;
     wire [1:0] next_ball_dir;
 
-    wire [3:0] collision_trig;
+    wire collision_trig;
 
     reg [6:0] skill_point, next_skill_point;
 
@@ -79,6 +79,7 @@ module main(
         if( ( ball_vy + ball_y + 10 ) > ( 480 + 50 ) )begin
             next_life_point = (life_point > 0) ? life_point-1 : 0;
         end
+        if(state != STAGE1) next_life_point = 5;
     end
 
     always @(*) begin
@@ -157,7 +158,7 @@ module main(
                 end
             end
             STAGE1 : begin
-                if(bricks == 1440'd0) next_state = WIN;
+                if(bricks == 1440'd0 || start_press) next_state = WIN;
                 else if(life_point == 0) next_state = LOSE;
                 else next_state = STAGE1;
             end
@@ -208,8 +209,8 @@ module main(
     reg [11:0] pixel;
     wire [11:0] pixel_play;
     wire [11:0] pixel_menu;
-    // wire [11:0] pixel_win;
-    // wire [11:0] pixel_lose;
+    wire [11:0] pixel_win;
+    wire [11:0] pixel_lose;
     wire valid;
     wire [9:0] h_cnt; //640
     wire [9:0] v_cnt;  //480
@@ -248,7 +249,7 @@ module main(
     wire [2:0] skill, skill_remain; // if the skill is still remained
 
     reg [3:0] key_num;
-    wire [511:0] key_down;
+    wire [100:0] key_down;
     wire [8:0] last_change;
     wire been_ready;
 
@@ -300,7 +301,8 @@ module main(
                 next_skill_point = (skill_point > 0) ? skill_point-1 : 0; // A
             end
             if(skill_counter == 1 && next_skill_point <= 3) next_skill_point = next_skill_point+1;
-        end
+        end 
+        else next_skill_point = 0;
     end
 
     always @(*) begin

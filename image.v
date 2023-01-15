@@ -155,10 +155,10 @@ module mem_addr_gen(
                 //addr = ((h_cnt%32)+32*block)+(v_cnt%20)*96;
             end
             WIN : begin
-                addr = ((h_cnt>>1)+320*(v_cnt>>1))% 76800; //640*480 --> 320*240
+                addr = ((h_cnt>>2)+160*(v_cnt>>2))% 19200; //640*480 --> 160*120
             end
             LOSE : begin
-                addr = ((h_cnt>>1)+320*(v_cnt>>1))% 76800; //640*480 --> 320*240
+                addr = ((h_cnt>>2)+160*(v_cnt>>2))% 19200; //640*480 --> 160*120
             end
             STAGE1 : begin
                 if(hint) begin
@@ -174,7 +174,7 @@ module mem_addr_gen(
                     addr = ((h_cnt%32)+32*5)+(v_cnt%20+20)*96;
                 end
                 else begin
-                    addr = ((h_cnt%32)+32*block)+(v_cnt%20)*96;
+                    addr = ((h_cnt%32)+32*block)+(v_cnt%20+20*(block/3))*96;
                 end
             end
             default : begin
@@ -191,7 +191,7 @@ module mem_addr_gen(
                     addr = ((h_cnt%32)+32*5)+(v_cnt%20)*96;
                 end
                 else begin
-                    addr = ((h_cnt%32)+32*block)+(v_cnt%20)*96;
+                    addr = ((h_cnt%32)+32*block)+(v_cnt%20+20*(block/3))*96;
                 end
             end
         endcase

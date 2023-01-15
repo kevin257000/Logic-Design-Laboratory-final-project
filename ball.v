@@ -29,8 +29,13 @@ module ball_control(
     output reg [9:0] next_bulletB_y,
 
     //Modify
-    output reg [3:0] collision_trig
+    output reg collision_trig
 );
+
+    parameter MENU = 3'd0;
+    parameter WIN = 3'd1;
+    parameter LOSE = 3'd2;
+    parameter STAGE1 = 3'd3;
 
     parameter H = 640;
     parameter V = 480;
@@ -49,7 +54,6 @@ module ball_control(
 
     reg [2:0] next_skill_remain;
 
-    reg [1439:0] Game;
 
     always @(posedge clk_22, posedge rst) begin
         if(rst) begin
@@ -61,7 +65,7 @@ module ball_control(
     end
 
     always @(*) begin
-        if(ball_dir[0] == 1 && ball_vy + ball_yd > V+50) begin // 向下
+        if( state != STAGE1|| (ball_dir[0] == 1 && ball_vy + ball_yd > V+50) ) begin // 向下
             next_skill_remain = 3'b0;
         end else begin
             if(skill_point > 0) next_skill_remain = skill_remain | skill;
@@ -344,11 +348,17 @@ module ball_control(
 
     always @(*) begin
         // 將球下個時間點的四個位置會碰到的磚塊破壞
-        collision_trig = 
-            bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] + 
-            bricks[(3*(next_ball_xr/32) + 60*(next_ball_yu/20))+:3] + 
-            bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] + 
-            bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3];
+        if(
+            bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] != 0 || 
+            bricks[(3*(next_ball_xr/32) + 60*(next_ball_yu/20))+:3] != 0 || 
+            bricks[(3*(next_ball_xr/32) + 60*(next_ball_yd/20))+:3] != 0 || 
+            bricks[(3*(next_ball_xl/32) + 60*(next_ball_yd/20))+:3] != 0 ||
+            (next_bulletA_y == 700 && bricks[(3*(next_bulletA_x/32) + 60*((bulletA_y - bullet_v)/20))+:3]) ||
+            (next_bulletA_y == 700 && bricks[(3*((next_bulletA_x+16)/32) + 60*((bulletA_y - bullet_v)/20))+:3]) ||
+            (next_bulletB_y == 700 && bricks[(3*(next_bulletB_x/32) + 60*((bulletB_y - bullet_v)/20))+:3]) ||
+            (next_bulletB_y == 700 && bricks[(3*((next_bulletB_x+16)/32) + 60*((bulletB_y - bullet_v)/20))+:3])
+        ) collision_trig = 1;
+        else collision_trig = 0;
 
         next_bricks = bricks;
         next_bricks[(3*(next_ball_xl/32) + 60*(next_ball_yu/20))+:3] = 3'd0;
@@ -365,58 +375,100 @@ module ball_control(
             next_bricks[(3*((next_bulletB_x+16)/32) + 60*((bulletB_y - bullet_v)/20))+:3] = 3'd0;
         end
 
-        // MENU state
+        // not STAGE state
         if(state != 3) begin
-            next_bricks = Game;
+            next_bricks[(3*3 + 60*1)+:3] = 3'd3; // (3,1)
+            next_bricks[(3*4 + 60*1)+:3] = 3'd5; // (4,1)
+            next_bricks[(3*5 + 60*1)+:3] = 3'd7; // (5,1)
+            next_bricks[(3*6 + 60*2)+:3] = 3'd3; // (3,2)
+            next_bricks[(3*7 + 60*2)+:3] = 3'd5; // (4,2)
+            next_bricks[(3*3 + 60*2)+:3] = 3'd7; // (5,2)
+            next_bricks[(3*3 + 60*3)+:3] = 3'd3; // (3,3)
+            next_bricks[(3*5 + 60*3)+:3] = 3'd5; // (4,3)
+            next_bricks[(3*7 + 60*3)+:3] = 3'd7; // (5,3)
+
+            next_bricks[(3*3 + 60*1)+:3] = 3'd3; // (9,1)
+            next_bricks[(3*4 + 60*1)+:3] = 3'd5; // (10,1)
+            next_bricks[(3*5 + 60*1)+:3] = 3'd7; // (11,1)
+            next_bricks[(3*6 + 60*2)+:3] = 3'd3; // (9,2)
+            next_bricks[(3*7 + 60*2)+:3] = 3'd5; // (10,2)
+            next_bricks[(3*3 + 60*2)+:3] = 3'd7; // (11,2)
+            next_bricks[(3*3 + 60*3)+:3] = 3'd3; // (9,3)
+            next_bricks[(3*5 + 60*3)+:3] = 3'd5; // (10,3)
+            next_bricks[(3*7 + 60*3)+:3] = 3'd7; // (11,3)
+
+            next_bricks[(3*3 + 60*1)+:3] = 3'd3; // (15,1)
+            next_bricks[(3*4 + 60*1)+:3] = 3'd5; // (16,1)
+            next_bricks[(3*5 + 60*1)+:3] = 3'd7; // (17,1)
+            next_bricks[(3*6 + 60*2)+:3] = 3'd3; // (15,2)
+            next_bricks[(3*7 + 60*2)+:3] = 3'd5; // (16,2)
+            next_bricks[(3*3 + 60*2)+:3] = 3'd7; // (17,2)
+            next_bricks[(3*3 + 60*3)+:3] = 3'd3; // (15,3)
+            next_bricks[(3*5 + 60*3)+:3] = 3'd5; // (16,3)
+            next_bricks[(3*7 + 60*3)+:3] = 3'd7; // (17,3)
+
+            next_bricks[(3*3 + 60*5)+:3] = 3'd3; // (3,5)
+            next_bricks[(3*4 + 60*5)+:3] = 3'd5; // (4,5)
+            next_bricks[(3*5 + 60*5)+:3] = 3'd7; // (5,5)
+            next_bricks[(3*6 + 60*6)+:3] = 3'd3; // (3,6)
+            next_bricks[(3*7 + 60*6)+:3] = 3'd5; // (4,6)
+            next_bricks[(3*3 + 60*6)+:3] = 3'd7; // (5,6)
+            next_bricks[(3*3 + 60*7)+:3] = 3'd3; // (3,7)
+            next_bricks[(3*5 + 60*7)+:3] = 3'd5; // (4,7)
+            next_bricks[(3*7 + 60*7)+:3] = 3'd7; // (5,7)
+
+            next_bricks[(3*3 + 60*5)+:3] = 3'd3; // (9,5)
+            next_bricks[(3*4 + 60*5)+:3] = 3'd5; // (10,5)
+            next_bricks[(3*5 + 60*5)+:3] = 3'd7; // (11,5)
+            next_bricks[(3*6 + 60*6)+:3] = 3'd3; // (9,6)
+            next_bricks[(3*7 + 60*6)+:3] = 3'd5; // (10,6)
+            next_bricks[(3*3 + 60*6)+:3] = 3'd7; // (11,6)
+            next_bricks[(3*3 + 60*7)+:3] = 3'd3; // (9,7)
+            next_bricks[(3*5 + 60*7)+:3] = 3'd5; // (10,7)
+            next_bricks[(3*7 + 60*7)+:3] = 3'd7; // (11,7)
+
+            next_bricks[(3*3 + 60*5)+:3] = 3'd3; // (15,5)
+            next_bricks[(3*4 + 60*5)+:3] = 3'd5; // (16,5)
+            next_bricks[(3*5 + 60*5)+:3] = 3'd7; // (17,5)
+            next_bricks[(3*6 + 60*6)+:3] = 3'd3; // (15,6)
+            next_bricks[(3*7 + 60*6)+:3] = 3'd5; // (16,6)
+            next_bricks[(3*3 + 60*6)+:3] = 3'd7; // (17,6)
+            next_bricks[(3*3 + 60*7)+:3] = 3'd3; // (15,7)
+            next_bricks[(3*5 + 60*7)+:3] = 3'd5; // (16,7)
+            next_bricks[(3*7 + 60*7)+:3] = 3'd7; // (17,7)
+
+            next_bricks[(3*3 + 60*9)+:3] = 3'd3; // (3,9)
+            next_bricks[(3*4 + 60*9)+:3] = 3'd5; // (4,9)
+            next_bricks[(3*5 + 60*9)+:3] = 3'd7; // (5,9)
+            next_bricks[(3*6 + 60*10)+:3] = 3'd3; // (3,10)
+            next_bricks[(3*7 + 60*10)+:3] = 3'd5; // (4,10)
+            next_bricks[(3*3 + 60*10)+:3] = 3'd7; // (5,10)
+            next_bricks[(3*3 + 60*11)+:3] = 3'd3; // (3,11)
+            next_bricks[(3*5 + 60*11)+:3] = 3'd5; // (4,11)
+            next_bricks[(3*7 + 60*11)+:3] = 3'd7; // (5,11)
+
+            next_bricks[(3*3 + 60*9)+:3] = 3'd3; // (9,9)
+            next_bricks[(3*4 + 60*9)+:3] = 3'd5; // (10,9)
+            next_bricks[(3*5 + 60*9)+:3] = 3'd7; // (11,9)
+            next_bricks[(3*6 + 60*10)+:3] = 3'd3; // (9,10)
+            next_bricks[(3*7 + 60*10)+:3] = 3'd5; // (10,10)
+            next_bricks[(3*3 + 60*10)+:3] = 3'd7; // (11,10)
+            next_bricks[(3*3 + 60*11)+:3] = 3'd3; // (9,11)
+            next_bricks[(3*5 + 60*11)+:3] = 3'd5; // (10,11)
+            next_bricks[(3*7 + 60*11)+:3] = 3'd7; // (11,11)
+
+            next_bricks[(3*3 + 60*9)+:3] = 3'd3; // (15,9)
+            next_bricks[(3*4 + 60*9)+:3] = 3'd5; // (16,9)
+            next_bricks[(3*5 + 60*9)+:3] = 3'd7; // (17,9)
+            next_bricks[(3*6 + 60*10)+:3] = 3'd3; // (15,10)
+            next_bricks[(3*7 + 60*10)+:3] = 3'd5; // (16,10)
+            next_bricks[(3*3 + 60*10)+:3] = 3'd7; // (17,10)
+            next_bricks[(3*3 + 60*11)+:3] = 3'd3; // (15,11)
+            next_bricks[(3*5 + 60*11)+:3] = 3'd5; // (16,11)
+            next_bricks[(3*7 + 60*11)+:3] = 3'd7; // (17,11)
+
         end
     end
-
-// 0 空 1 磚
-// for testing
-always @(*) begin
-    Game = 1440'd0;
-    
-    //Game[(3*x + 60*y)+:3] = 3'd1; // (x,y)
-
-    Game[(3*1 + 60*1)+:3] = 3'd1; // (1,1)
-    Game[(3*2 + 60*1)+:3] = 3'd1; // (2,1)
-    Game[(3*3 + 60*1)+:3] = 3'd1; // (3,1)
-    Game[(3*1 + 60*2)+:3] = 3'd1; // (1,2)
-    Game[(3*2 + 60*2)+:3] = 3'd1; // (2,2)
-    Game[(3*3 + 60*2)+:3] = 3'd1; // (3,2)
-    Game[(3*1 + 60*3)+:3] = 3'd1; // (1,3)
-    Game[(3*2 + 60*3)+:3] = 3'd1; // (2,3)
-    Game[(3*3 + 60*3)+:3] = 3'd1; // (3,3)
-
-    Game[(3*13 + 60*1)+:3] = 3'd1; // (13,1)
-    Game[(3*14 + 60*1)+:3] = 3'd1; // (14,1)
-    Game[(3*15 + 60*1)+:3] = 3'd1; // (15,1)
-    Game[(3*13 + 60*2)+:3] = 3'd1; // (13,2)
-    Game[(3*14 + 60*2)+:3] = 3'd1; // (14,2)
-    Game[(3*15 + 60*2)+:3] = 3'd1; // (15,2)
-
-    Game[(3*13 + 60*5)+:3] = 3'd1; // (13,1)
-    Game[(3*14 + 60*5)+:3] = 3'd1; // (14,1)
-    Game[(3*15 + 60*5)+:3] = 3'd1; // (15,1)
-    Game[(3*13 + 60*6)+:3] = 3'd1; // (13,2)
-    Game[(3*14 + 60*6)+:3] = 3'd1; // (14,2)
-    Game[(3*15 + 60*6)+:3] = 3'd1; // (15,2)
-
-    Game[(3*7 + 60*4)+:3] = 3'd1; // (0,1)
-    Game[(3*8 + 60*4)+:3] = 3'd1; // (1,1)
-    Game[(3*9 + 60*4)+:3] = 3'd1; // (3,1)
-    Game[(3*7 + 60*5)+:3] = 3'd1; // (0,2)
-    Game[(3*8 + 60*5)+:3] = 3'd1; // (1,2)
-    Game[(3*9 + 60*5)+:3] = 3'd1; // (3,2)
-
-    Game[(3*7 + 60*8)+:3] = 3'd1; // (0,1)
-    Game[(3*8 + 60*8)+:3] = 3'd1; // (1,1)
-    Game[(3*9 + 60*8)+:3] = 3'd1; // (3,1)
-    Game[(3*7 + 60*9)+:3] = 3'd1; // (0,2)
-    Game[(3*8 + 60*9)+:3] = 3'd1; // (1,2)
-    Game[(3*9 + 60*9)+:3] = 3'd1; // (3,2)
-end
-
 endmodule
 
 

@@ -19,7 +19,7 @@ module music_control (
 	input clk, 
     input clk_22, // clk/0.05sec
     input rst,
-    input [3:0] collision_trig,
+    input collision_trig,
     input [2:0] state,
 
     output audio_mclk, // master clock
@@ -44,8 +44,8 @@ module music_control (
 
     reg [9:0] SE_counter, next_SE_counter; // sound effect counter
 
-    assign freqL = (state == MENU) ? freqL_MENU : freqL_SE;
-    assign freqR = (state == MENU) ? freqR_MENU : freqR_SE;
+    assign freqL = (state == MENU) ? freqL_MENU : (state == STAGE1) ? freqL_SE : `sil;
+    assign freqR = (state == MENU) ? freqR_MENU : (state == STAGE1) ? freqR_SE : `sil;
 
     always @(posedge clk_22, posedge rst) begin
         if(rst) begin
@@ -62,6 +62,7 @@ module music_control (
             else next_SE_counter = 8;
         end 
         else next_SE_counter = SE_counter;
+        if(state != 3'd3) next_SE_counter = 0;
     end
 
     always @(*) begin
