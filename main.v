@@ -70,7 +70,7 @@ module main(
 
     always @(posedge clk_22, posedge rst) begin
         if(rst)begin
-            life_point <= 8'b0000_0101;
+            life_point <= 8'd5;
         end else begin
             life_point <= next_life_point;
         end
@@ -85,7 +85,7 @@ module main(
 
     always @(*) begin
         nums = 16'd0;
-        nums[7:0] = life_point;
+        if(state == STAGE1) nums[7:0] = life_point;
     end
 
     SevenSegment SS_00(.display(DISPLAY), .digit(DIGIT), .nums(nums), .rst(rst), .clk(clk));
@@ -106,14 +106,14 @@ module main(
     always @(*) begin
         case(state)
             MENU : begin
-                if(start_press) nled = 16'b0000_0000_0001_1111;
+                if(start_press) nled = 16'b0000_0000_0000_0000;
                 else nled = 16'b0;
             end
             WIN : nled = 16'b0000_0000_1000_0000;
             LOSE : nled = 16'b0000_0000_0100_0000;
             STAGE1 : begin
                 nled = led;
-                if( ( ball_vy + ball_y + 10 ) > ( 480 + 50 ) ) nled[4:0] = led[4:0] >> 1;
+                // if( ( ball_vy + ball_y + 10 ) > ( 480 + 50 ) ) nled[4:0] = led[4:0] >> 1;
                 if(skill_point == 0) nled[15:13] = 3'b000;
                 if(skill_point == 1) nled[15:13] = 3'b100;
                 if(skill_point == 2) nled[15:13] = 3'b110;
@@ -150,7 +150,7 @@ module main(
             end
             STAGE1 : begin
                 if(bricks == 1440'd0) next_state = WIN;
-                else if(led[4:0] == 5'b0) next_state = LOSE;
+                else if(life_point == 0) next_state = LOSE;
                 else next_state = STAGE1;
             end
             default : begin
@@ -311,9 +311,20 @@ module main(
     one_pulse K_one_pulse(.clk(clk_22), .pb_in(skill_press[1]), .pb_out(skill[1]));
     one_pulse L_one_pulse(.clk(clk_22), .pb_in(skill_press[0]), .pb_out(skill[2]));
 
+    reg [9:0] skill_counter; // 0.05*200 = 10sec
+
     always @(posedge clk_22, posedge rst) begin
         if(rst) begin
-            skill_point <= 3;
+            skill_counter <= 0;
+        end
+        else begin
+            skill_counter <= (skill_counter < 200) ? skill_counter+1 : 0;
+        end
+    end
+
+    always @(posedge clk_22, posedge rst) begin
+        if(rst) begin
+            skill_point <= 0;
         end
         else begin
             skill_point <= next_skill_point;
@@ -326,6 +337,7 @@ module main(
             if( (skill[2] & ~skill_remain[2]) == 1 || (skill[1] & ~skill_remain[1]) || (skill[0] & ~skill_remain[0])) begin
                 next_skill_point = (skill_point > 0) ? skill_point-1 : 0; // A
             end
+            if(skill_counter == 1 && next_skill_point <= 3) next_skill_point = next_skill_point+1;
         end
     end
 
