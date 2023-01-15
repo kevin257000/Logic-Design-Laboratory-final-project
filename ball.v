@@ -49,6 +49,8 @@ module ball_control(
 
     reg [2:0] next_skill_remain;
 
+    reg [1439:0] Game;
+
     always @(posedge clk_22, posedge rst) begin
         if(rst) begin
             skill_remain <= 0;
@@ -305,7 +307,7 @@ module ball_control(
         // board_y = BY
         // board_w
 
-        if(next_ball_yd >= BY && next_ball_yd <= BY+10) begin 
+        if(next_ball_yd >= BY && next_ball_yd <= BY+30) begin 
             if( (next_ball_xr >= board_x && next_ball_xr <= board_x+board_w) || (next_ball_xl >= board_x && next_ball_xl <= board_x+board_w) )  begin
                 next_ball_dir[0] = 0;
                 // next_ball_y = BY - ( (next_ball_yd) - BY );
@@ -319,10 +321,11 @@ module ball_control(
                     if(random_num <= 4) begin
                         if(next_ball_vx + random_num <= 20) next_ball_vx = next_ball_vx + random_num;
                         if(next_ball_vx + random_num <= 20) next_ball_vy = next_ball_vy + random_num;
-                    end else begin
-                        if(next_ball_vx > random_num-4) next_ball_vx = next_ball_vx - (random_num-4);
-                        if(next_ball_vx > random_num-4) next_ball_vy = next_ball_vy - (random_num-4);
-                    end
+                    end 
+                    // else begin
+                    //     if(next_ball_vx > random_num-4) next_ball_vx = next_ball_vx - (random_num-4);
+                    //     if(next_ball_vx > random_num-4) next_ball_vy = next_ball_vy - (random_num-4);
+                    // end
                 end
             end
         end
@@ -364,11 +367,58 @@ module ball_control(
 
         // MENU state
         if(state != 3) begin
-            next_bricks = bricks;
+            next_bricks = Game;
         end
     end
 
+// 0 空 1 磚
+// for testing
+always @(*) begin
+    Game = 1440'd0;
+    
+    //Game[(3*x + 60*y)+:3] = 3'd1; // (x,y)
+
+    Game[(3*1 + 60*1)+:3] = 3'd1; // (1,1)
+    Game[(3*2 + 60*1)+:3] = 3'd1; // (2,1)
+    Game[(3*3 + 60*1)+:3] = 3'd1; // (3,1)
+    Game[(3*1 + 60*2)+:3] = 3'd1; // (1,2)
+    Game[(3*2 + 60*2)+:3] = 3'd1; // (2,2)
+    Game[(3*3 + 60*2)+:3] = 3'd1; // (3,2)
+    Game[(3*1 + 60*3)+:3] = 3'd1; // (1,3)
+    Game[(3*2 + 60*3)+:3] = 3'd1; // (2,3)
+    Game[(3*3 + 60*3)+:3] = 3'd1; // (3,3)
+
+    Game[(3*13 + 60*1)+:3] = 3'd1; // (13,1)
+    Game[(3*14 + 60*1)+:3] = 3'd1; // (14,1)
+    Game[(3*15 + 60*1)+:3] = 3'd1; // (15,1)
+    Game[(3*13 + 60*2)+:3] = 3'd1; // (13,2)
+    Game[(3*14 + 60*2)+:3] = 3'd1; // (14,2)
+    Game[(3*15 + 60*2)+:3] = 3'd1; // (15,2)
+
+    Game[(3*13 + 60*5)+:3] = 3'd1; // (13,1)
+    Game[(3*14 + 60*5)+:3] = 3'd1; // (14,1)
+    Game[(3*15 + 60*5)+:3] = 3'd1; // (15,1)
+    Game[(3*13 + 60*6)+:3] = 3'd1; // (13,2)
+    Game[(3*14 + 60*6)+:3] = 3'd1; // (14,2)
+    Game[(3*15 + 60*6)+:3] = 3'd1; // (15,2)
+
+    Game[(3*7 + 60*4)+:3] = 3'd1; // (0,1)
+    Game[(3*8 + 60*4)+:3] = 3'd1; // (1,1)
+    Game[(3*9 + 60*4)+:3] = 3'd1; // (3,1)
+    Game[(3*7 + 60*5)+:3] = 3'd1; // (0,2)
+    Game[(3*8 + 60*5)+:3] = 3'd1; // (1,2)
+    Game[(3*9 + 60*5)+:3] = 3'd1; // (3,2)
+
+    Game[(3*7 + 60*8)+:3] = 3'd1; // (0,1)
+    Game[(3*8 + 60*8)+:3] = 3'd1; // (1,1)
+    Game[(3*9 + 60*8)+:3] = 3'd1; // (3,1)
+    Game[(3*7 + 60*9)+:3] = 3'd1; // (0,2)
+    Game[(3*8 + 60*9)+:3] = 3'd1; // (1,2)
+    Game[(3*9 + 60*9)+:3] = 3'd1; // (3,2)
+end
+
 endmodule
+
 
 module LFSR #(parameter NUM_BITS = 3)
 (

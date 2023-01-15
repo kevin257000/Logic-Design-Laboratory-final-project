@@ -46,8 +46,6 @@ module main(
     reg [1439:0] bricks;
     wire [1439:0] next_bricks; // 3*20*24 = 1440
 
-    reg [1439:0] Game;
-
     reg [9:0] board_x, board_y, board_vx, board_vy;
     reg [9:0] next_board_x, next_board_y, next_board_vx, next_board_vy;
 
@@ -143,10 +141,20 @@ module main(
                 end
             end
             WIN : begin
-                next_state = state;
+                if(start_press) begin
+                    next_state = MENU;
+                end
+                else begin
+                    next_state = state;
+                end
             end
             LOSE : begin
-                next_state = state;
+                if(start_press) begin
+                    next_state = MENU;
+                end
+                else begin
+                    next_state = state;
+                end
             end
             STAGE1 : begin
                 if(bricks == 1440'd0) next_state = WIN;
@@ -162,7 +170,7 @@ module main(
 
     always @(posedge clk_22, posedge rst) begin
         if(rst) begin
-            bricks <= Game;
+            bricks <= 1440'd0;
             ball_x <= 10'd320;
             ball_y <= 10'd240;
             ball_vx <= 10'd12;
@@ -189,52 +197,6 @@ module main(
             bulletB_x <= next_bulletB_x;
             bulletB_y <= next_bulletB_y;        
         end
-    end
-
-    // 0 空 1 磚
-    // for testing
-    always @(*) begin
-        Game = 1440'd0;
-        
-        //Game[(3*x + 60*y)+:3] = 3'd1; // (x,y)
-
-        Game[(3*1 + 60*1)+:3] = 3'd1; // (1,1)
-        Game[(3*2 + 60*1)+:3] = 3'd1; // (2,1)
-        Game[(3*3 + 60*1)+:3] = 3'd1; // (3,1)
-        Game[(3*1 + 60*2)+:3] = 3'd1; // (1,2)
-        Game[(3*2 + 60*2)+:3] = 3'd1; // (2,2)
-        Game[(3*3 + 60*2)+:3] = 3'd1; // (3,2)
-        Game[(3*1 + 60*3)+:3] = 3'd1; // (1,3)
-        Game[(3*2 + 60*3)+:3] = 3'd1; // (2,3)
-        Game[(3*3 + 60*3)+:3] = 3'd1; // (3,3)
-
-        Game[(3*13 + 60*1)+:3] = 3'd1; // (13,1)
-        Game[(3*14 + 60*1)+:3] = 3'd1; // (14,1)
-        Game[(3*15 + 60*1)+:3] = 3'd1; // (15,1)
-        Game[(3*13 + 60*2)+:3] = 3'd1; // (13,2)
-        Game[(3*14 + 60*2)+:3] = 3'd1; // (14,2)
-        Game[(3*15 + 60*2)+:3] = 3'd1; // (15,2)
-
-        Game[(3*13 + 60*5)+:3] = 3'd1; // (13,1)
-        Game[(3*14 + 60*5)+:3] = 3'd1; // (14,1)
-        Game[(3*15 + 60*5)+:3] = 3'd1; // (15,1)
-        Game[(3*13 + 60*6)+:3] = 3'd1; // (13,2)
-        Game[(3*14 + 60*6)+:3] = 3'd1; // (14,2)
-        Game[(3*15 + 60*6)+:3] = 3'd1; // (15,2)
-
-        Game[(3*7 + 60*4)+:3] = 3'd1; // (0,1)
-        Game[(3*8 + 60*4)+:3] = 3'd1; // (1,1)
-        Game[(3*9 + 60*4)+:3] = 3'd1; // (3,1)
-        Game[(3*7 + 60*5)+:3] = 3'd1; // (0,2)
-        Game[(3*8 + 60*5)+:3] = 3'd1; // (1,2)
-        Game[(3*9 + 60*5)+:3] = 3'd1; // (3,2)
-
-        Game[(3*7 + 60*8)+:3] = 3'd1; // (0,1)
-        Game[(3*8 + 60*8)+:3] = 3'd1; // (1,1)
-        Game[(3*9 + 60*8)+:3] = 3'd1; // (3,1)
-        Game[(3*7 + 60*9)+:3] = 3'd1; // (0,2)
-        Game[(3*8 + 60*9)+:3] = 3'd1; // (1,2)
-        Game[(3*9 + 60*9)+:3] = 3'd1; // (3,2)
     end
 
     wire [11:0] data;
@@ -350,8 +312,14 @@ module main(
         next_board_x = board_x;
         if(state == STAGE1) begin
             if(key_down[last_change] == 1'b1) begin
-                if(last_change == keyD) next_board_x = (board_x < 540) ? board_x + board_vx : board_x; // A
-                else if(last_change == keyA) next_board_x = (board_x > 5) ? board_x - board_vx : board_x; // D
+                if(skill_remain[0] == 1) begin
+                    if(last_change == keyD) next_board_x = (board_x < 540-96) ? board_x + board_vx : board_x; // A
+                    else if(last_change == keyA) next_board_x = (board_x > 5) ? board_x - board_vx : board_x; // D        
+                end 
+                else begin
+                    if(last_change == keyD) next_board_x = (board_x < 540) ? board_x + board_vx : board_x; // A
+                    else if(last_change == keyA) next_board_x = (board_x > 5) ? board_x - board_vx : board_x; // D
+                end
             end
         end
     end
